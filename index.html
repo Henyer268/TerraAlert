@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>terraALERT — Monitor Sísmico Global</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════
+       INTRO OVERLAY
+       ══════════════════════════════════════ -->
+  <div id="intro-overlay">
+    <video id="intro-video" src="/intro.mp4" autoplay muted playsinline preload="auto"></video>
+    <button id="btn-skip" onclick="enterApp()">SALTAR INTRO</button>
+    <button id="btn-enter" onclick="enterApp()">
+      <span class="btn-icon">▶</span> ENTRAR
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       APP PRINCIPAL
+       ══════════════════════════════════════ -->
+  <div id="app" class="hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <div class="logo-circle"></div>
+        </div>
+        <div class="brand-txt">
+          <span class="brand-terra">TERRA</span>
+          <span class="brand-alert">ALERT</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-view="map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+          <span>Mapa Global</span>
+        </a>
+        <a href="#" class="nav-item" data-view="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          <span>Historial</span>
+        </a>
+        <a href="#" class="nav-item" data-view="alerts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>Alertas</span>
+          <span class="nav-badge" id="alert-count">0</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="live-indicator">
+          <span class="live-dot"></span>
+          <span>EN VIVO · USGS</span>
+        </div>
+        <div class="last-update" id="last-update">Actualizando...</div>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 class="page-title" id="page-title">Dashboard</h1>
+          <span class="page-sub">Últimas 24 horas · Global</span>
+        </div>
+        <div class="topbar-right">
+          <div class="filter-group">
+            <label>Magnitud mínima</label>
+            <select id="filter-mag" onchange="applyFilters()">
+              <option value="0">Todos</option>
+              <option value="2.5">≥ 2.5</option>
+              <option value="4.5" selected>≥ 4.5</option>
+              <option value="6">≥ 6.0</option>
+            </select>
+          </div>
+          <button class="btn-refresh" onclick="loadData()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg>
+            Actualizar
+          </button>
+        </div>
+      </header>
+
+      <!-- STAT CARDS -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Sismos Hoy</div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-sub" id="stat-total-sub">cargando...</div>
+        </div>
+        <div class="stat-card stat-card--warn">
+          <div class="stat-label">Magnitud Máx.</div>
+          <div class="stat-value" id="stat-max">—</div>
+          <div class="stat-sub" id="stat-max-sub">cargando...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Magnitud Prom.</div>
+          <div class="stat-value" id="stat-avg">—</div>
+          <div class="stat-sub">últimas 24h</div>
+        </div>
+        <div class="stat-card stat-card--danger" id="stat-danger-card">
+          <div class="stat-label">Zona Más Activa</div>
+          <div class="stat-value stat-value--sm" id="stat-zone">—</div>
+          <div class="stat-sub" id="stat-zone-sub">cargando...</div>
+        </div>
+      </section>
+
+      <!-- MAPA + TABLA -->
+      <section class="content-grid">
+
+        <!-- MAPA -->
+        <div class="map-panel">
+          <div class="panel-header">
+            <span class="panel-title">Mapa Sísmico</span>
+            <span class="panel-tag">TIEMPO REAL</span>
+          </div>
+          <div id="map"></div>
+        </div>
+
+        <!-- TABLA SISMOS RECIENTES -->
+        <div class="table-panel">
+          <div class="panel-header">
+            <span class="panel-title">Sismos Recientes</span>
+            <span class="panel-count" id="quake-count">— eventos</span>
+          </div>
+          <div class="table-scroll">
+            <table class="quake-table">
+              <thead>
+                <tr>
+                  <th>Mag.</th>
+                  <th>Lugar</th>
+                  <th>Hora</th>
+                  <th>Prof.</th>
+                </tr>
+              </thead>
+              <tbody id="quake-tbody">
+                <tr><td colspan="4" class="loading-row">Cargando datos USGS...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
