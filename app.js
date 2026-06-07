@@ -9,6 +9,14 @@ const BACKEND_URL = window.location.hostname === 'localhost' || window.location.
   ? 'http://127.0.0.1:8000'
   : 'https://terraalert-t7t5.onrender.com';
 
+  /* ─── SUPABASE ───────────────────────────────── */
+const SUPABASE_URL = 'https://oajhwwplkmwdwljokhvk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hamh3d3Bsa213ZHdsam9raHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDcxMjcsImV4cCI6MjA5NjQyMzEyN30.M7msv2z_hgpYfjcH0JdWkPUb3olKv66cr7YyJ_fQIqo';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let userPreferences = { umbral_magnitud: 5.0, ciudad: '', zona_interes: '' };
+
 /* ─── INTRO ──────────────────────────────── */
 const overlay  = document.getElementById('intro-overlay');
 const video    = document.getElementById('intro-video');
@@ -27,6 +35,17 @@ function enterApp() {
     video.pause(); video.src = '';
   }, { once: true });
   initDashboard();
+
+  // Mostrar modal de login si no hay sesión activa
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) {
+      document.getElementById('auth-modal')?.classList.remove('hidden');
+    } else {
+      currentUser = session.user;
+      loadUserPreferences();
+      showUserMenu();
+    }
+  });
 }
 
 /* ─── DATOS GLOBALES ──────────────────────── */
@@ -249,5 +268,169 @@ document.querySelectorAll('.nav-item').forEach(item => {
     const view = item.dataset.view;
     document.getElementById('page-title').textContent =
       { dashboard:'Dashboard', map:'Mapa Global', history:'Historial', alerts:'Alertas' }[view] || view;
+
+    // Mostrar/ocultar paneles según vista
+    const prefsPanel = document.getElementById('prefs-panel');
+    const historyPanel = document.getElementById('history-panel');
+
+    if (view === 'history') {
+      prefsPanel?.classList.remove('hidden');
+      historyPanel?.classList.remove('hidden');
+      loadHistory();
+    } else {
+      prefsPanel?.classList.add('hidden');
+      historyPanel?.classList.add('hidden');
+    }
+
+    // Mostrar modal de login si no hay sesión
+    if (view === 'history' && !currentUser) {
+      document.getElementById('auth-modal')?.classList.remove('hidden');
+    }
   });
+});
+
+/* ─── AUTH ───────────────────────────────── */
+let authMode = 'login';
+
+function switchTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+  const errorEl = document.getElementById('auth-error');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Ingresa correo y contraseña.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  let result;
+  if (authMode === 'login') {
+    result = await supabase.auth.signInWithPassword({ email, password });
+  } else {
+    result = await supabase.auth.signUp({ email, password });
+  }
+
+  if (result.error) {
+    errorEl.textContent = result.error.message;
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  currentUser = result.data.user;
+  document.getElementById('auth-modal').classList.add('hidden');
+  await loadUserPreferences();
+  showUserMenu();
+}
+
+function skipAuth() {
+  document.getElementById('auth-modal').classList.add('hidden');
+}
+
+async function loadUserPreferences() {
+  if (!currentUser) return;
+  const { data } = await supabase
+    .from('user_preferences')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  if (data) {
+    userPreferences = data;
+    document.getElementById('pref-ciudad').value = data.ciudad || '';
+    document.getElementById('pref-umbral').value = data.umbral_magnitud || 5.0;
+    document.getElementById('pref-zona').value = data.zona_interes || '';
+  }
+}
+
+async function savePreferences() {
+  if (!currentUser) return;
+  const prefs = {
+    user_id: currentUser.id,
+    ciudad: document.getElementById('pref-ciudad').value,
+    umbral_magnitud: parseFloat(document.getElementById('pref-umbral').value),
+    zona_interes: document.getElementById('pref-zona').value,
+    updated_at: new Date().toISOString()
+  };
+
+  await supabase.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
+  userPreferences = prefs;
+  alert('Preferencias guardadas.');
+}
+
+async function saveQuake(quake) {
+  if (!currentUser) { alert('Inicia sesión para guardar sismos.'); return; }
+  await supabase.from('quake_history').insert({
+    user_id: currentUser.id,
+    quake_id: quake.id,
+    magnitud: quake.properties.mag,
+    clasificacion: quake.properties.clasificacion,
+    lugar: quake.properties.place,
+    hora: new Date(quake.properties.time).toISOString(),
+    latitud: quake.geometry.coordinates[1],
+    longitud: quake.geometry.coordinates[0],
+    profundidad_km: quake.geometry.coordinates[2]
+  });
+  alert('Sismo guardado en tu historial.');
+}
+
+async function loadHistory() {
+  if (!currentUser) { alert('Inicia sesión para ver tu historial.'); return; }
+  const { data } = await supabase
+    .from('quake_history')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const tbody = document.getElementById('history-tbody');
+  if (!data || !data.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading-row">Sin sismos guardados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(q => `
+    <tr>
+      <td><span class="mag-pill ${magClass(q.magnitud)}">${q.magnitud?.toFixed(1)}</span></td>
+      <td><span class="quake-place">${shortPlace(q.lugar)}</span></td>
+      <td><span class="quake-time">${timeAgo(new Date(q.hora))}</span></td>
+      <td><span class="quake-depth">${q.profundidad_km?.toFixed(0)} km</span></td>
+    </tr>
+  `).join('');
+}
+
+function showUserMenu() {
+  const email = currentUser?.email || '';
+  const initials = email.substring(0, 2).toUpperCase();
+  const topbar = document.querySelector('.topbar-right');
+  const existing = document.getElementById('user-menu');
+  if (existing) existing.remove();
+
+  const menu = document.createElement('div');
+  menu.id = 'user-menu';
+  menu.className = 'user-menu';
+  menu.innerHTML = `
+    <div class="user-avatar" title="${email}">${initials}</div>
+    <button class="btn-logout" onclick="logout()">Salir</button>
+  `;
+  topbar.prepend(menu);
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  document.getElementById('user-menu')?.remove();
+}
+
+/* ─── INIT AUTH ──────────────────────────── */
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session?.user) {
+    currentUser = session.user;
+    loadUserPreferences();
+  }
 });

@@ -10,6 +10,26 @@
 <body>
 
   <!-- ══════════════════════════════════════
+     MODAL LOGIN
+     ══════════════════════════════════════ -->
+<div id="auth-modal" class="auth-modal hidden">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <span class="brand-terra">TERRA</span><span class="brand-alert">ALERT</span>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Iniciar sesión</button>
+      <button class="auth-tab" onclick="switchTab('register')">Registrarse</button>
+    </div>
+    <div id="auth-error" class="auth-error hidden"></div>
+    <input id="auth-email" type="email" placeholder="Correo electrónico" class="auth-input" />
+    <input id="auth-password" type="password" placeholder="Contraseña" class="auth-input" />
+    <button class="auth-btn" onclick="handleAuth()">Entrar</button>
+    <button class="auth-skip" onclick="skipAuth()">Continuar sin cuenta</button>
+  </div>
+</div>
+
+  <!-- ══════════════════════════════════════
        INTRO OVERLAY
        ══════════════════════════════════════ -->
   <div id="intro-overlay">
@@ -92,6 +112,26 @@
         </div>
       </header>
 
+      <!-- PREFERENCIAS -->
+<div id="prefs-panel" class="prefs-panel hidden">
+  <div class="prefs-title">Mis Preferencias</div>
+  <div class="prefs-grid">
+    <div class="pref-field">
+      <label class="pref-label">Ciudad favorita</label>
+      <input id="pref-ciudad" class="pref-input" type="text" placeholder="Ej: Bogotá" />
+    </div>
+    <div class="pref-field">
+      <label class="pref-label">Umbral de alerta (magnitud)</label>
+      <input id="pref-umbral" class="pref-input" type="number" step="0.5" min="1" max="10" value="5.0" />
+    </div>
+    <div class="pref-field">
+      <label class="pref-label">Zona de interés</label>
+      <input id="pref-zona" class="pref-input" type="text" placeholder="Ej: Colombia" />
+    </div>
+  </div>
+  <button class="btn-save-prefs" onclick="savePreferences()">Guardar preferencias</button>
+</div>
+
       <!-- STAT CARDS -->
       <section class="stats-grid">
         <div class="stat-card">
@@ -151,11 +191,35 @@
           </div>
         </div>
 
+        <!-- HISTORIAL -->
+<div id="history-panel" class="table-panel hidden">
+  <div class="panel-header">
+    <span class="panel-title">Mi Historial</span>
+    <button class="btn-refresh" onclick="loadHistory()">Cargar</button>
+  </div>
+  <div class="table-scroll">
+    <table class="quake-table">
+      <thead>
+        <tr>
+          <th>Mag.</th>
+          <th>Lugar</th>
+          <th>Hora</th>
+          <th>Prof.</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody">
+        <tr><td colspan="4" class="loading-row">Inicia sesión para ver tu historial</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
       </section>
     </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>

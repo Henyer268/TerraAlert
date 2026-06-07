@@ -244,3 +244,93 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .quake-time  { color: var(--muted2); font-family: 'Share Tech Mono', monospace; font-size: 10px; white-space: nowrap; }
 .quake-depth { color: var(--muted2); font-family: 'Share Tech Mono', monospace; font-size: 10px; }
 .loading-row { text-align: center; padding: 40px; color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px; }
+
+/* ─── AUTH MODAL ─────────────────────────── */
+.auth-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  z-index: 2000; display: flex; align-items: center; justify-content: center;
+}
+.auth-box {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 40px 36px; width: 380px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.auth-logo {
+  text-align: center; font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px; letter-spacing: 4px; margin-bottom: 8px;
+}
+.auth-tabs {
+  display: flex; gap: 8px;
+}
+.auth-tab {
+  flex: 1; padding: 8px; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted2); border-radius: 6px; cursor: pointer; font-size: 13px;
+  transition: all .2s;
+}
+.auth-tab.active { background: var(--bg4); color: var(--blue); border-color: var(--blue); }
+.auth-input {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  border-radius: 6px; padding: 10px 14px; font-size: 13px; outline: none;
+  font-family: 'Inter', sans-serif;
+}
+.auth-input:focus { border-color: var(--blue); }
+.auth-btn {
+  background: var(--red); color: #fff; border: none; border-radius: 6px;
+  padding: 12px; font-family: 'Bebas Neue', sans-serif; font-size: 18px;
+  letter-spacing: 3px; cursor: pointer; transition: opacity .2s;
+}
+.auth-btn:hover { opacity: 0.85; }
+.auth-skip {
+  background: transparent; border: none; color: var(--muted2);
+  font-size: 12px; cursor: pointer; text-align: center;
+  font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+}
+.auth-skip:hover { color: var(--text); }
+.auth-error {
+  background: rgba(204,34,0,.15); border: 1px solid var(--red);
+  color: #ff6644; border-radius: 6px; padding: 8px 12px; font-size: 12px;
+}
+
+/* ─── USER MENU ──────────────────────────── */
+.user-menu {
+  display: flex; align-items: center; gap: 10px;
+}
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--red); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: #fff; cursor: pointer;
+}
+.btn-logout {
+  background: transparent; border: 1px solid var(--border2); color: var(--muted2);
+  border-radius: 5px; padding: 5px 10px; font-size: 11px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; transition: all .2s;
+}
+.btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+/* ─── PREFERENCIAS ───────────────────────── */
+.prefs-panel {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px; margin: 0 24px 12px;
+}
+.prefs-title {
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  letter-spacing: 2px; color: var(--muted2); margin-bottom: 14px;
+  text-transform: uppercase;
+}
+.prefs-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+}
+.pref-field { display: flex; flex-direction: column; gap: 6px; }
+.pref-label { font-size: 10px; color: var(--muted); font-family: 'Share Tech Mono', monospace; }
+.pref-input {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  border-radius: 5px; padding: 7px 10px; font-size: 12px; outline: none;
+}
+.pref-input:focus { border-color: var(--blue); }
+.btn-save-prefs {
+  margin-top: 12px; background: var(--bg3); border: 1px solid var(--blue);
+  color: var(--blue); border-radius: 5px; padding: 7px 18px;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  letter-spacing: 1px; cursor: pointer; transition: all .2s;
+}
+.btn-save-prefs:hover { background: var(--blue); color: #000; }

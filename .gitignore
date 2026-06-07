@@ -1,0 +1,5 @@
+backend/__pycache__/
+backend/venv/
+java-service/target/
+*.pyc
+.env
