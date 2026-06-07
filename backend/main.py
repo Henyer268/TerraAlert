@@ -13,7 +13,7 @@ app.add_middleware(
 )
 
 USGS_URL     = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-JAVA_SERVICE = "http://localhost:8001"
+JAVA_SERVICE = "https://terraalert-java.onrender.com"
 
 
 def clasificar_magnitud(mag: float) -> str:
