@@ -15,6 +15,11 @@ app.add_middleware(
 USGS_URL     = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 JAVA_SERVICE = "https://terraalert-java.onrender.com"
 
+VAPID_PRIVATE_KEY = "2aGVAkMy6sLh_NYV_rgCgbGKnZyJ_JefclrIGrCt_Rc"
+VAPID_PUBLIC_KEY  = "BGksutg_PEWXhXQ9abTjm8VupjYOcWbiHKge0zABrG_1hbCJJXp6Ke-A9hoo7K63Wl7T6YXHXahVx7V8RCcS2PY"
+VAPID_CLAIMS      = {"sub": "mailto:ais123k2k@gmail.com"}
+
+subscriptions = []
 
 def clasificar_magnitud(mag: float) -> str:
     """Fallback local si el microservicio Java no responde."""
@@ -103,7 +108,6 @@ async def get_sismos(
         "generado": datetime.utcnow().isoformat(),
     }
 
-
 @app.get("/sismos/resumen")
 async def get_resumen():
     params = {
@@ -153,3 +157,35 @@ async def get_resumen():
         "por_clasificacion": conteo,
         "generado":          datetime.utcnow().isoformat(),
     }
+    
+from pywebpush import webpush, WebPushException
+import json
+
+
+@app.get("/vapid-public-key")
+def get_vapid_key():
+    return {"key": VAPID_PUBLIC_KEY}
+
+
+@app.post("/push/subscribe")
+async def subscribe(sub: dict):
+    if sub not in subscriptions:
+        subscriptions.append(sub)
+    return {"ok": True, "total": len(subscriptions)}
+
+
+@app.post("/push/notify")
+async def notify(payload: dict):
+    data   = json.dumps(payload)
+    failed = []
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info=sub,
+                data=data,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+        except WebPushException as e:
+            failed.append(str(e))
+    return {"enviados": len(subscriptions) - len(failed), "errores": failed}
