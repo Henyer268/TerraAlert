@@ -3,26 +3,27 @@
    Frontend conectado al backend FastAPI
    ═══════════════════════════════════════════ */
 
+/* ─── SKIP INTRO SI YA FUE VISTO O VIENE DE OAUTH ── */
+if (sessionStorage.getItem('introVisto') ||
+    window.location.hash.includes('access_token') ||
+    window.location.search.includes('code=')) {
+  document.getElementById('intro-overlay').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+}
+
 /* ─── CONFIG ──────────────────────────────── */
-// En local usa el backend. En producción cambia esta URL por la de Render.
 const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8000'
   : 'https://terraalert-t7t5.onrender.com';
 
-  /* ─── SUPABASE ───────────────────────────────── */
+/* ─── SUPABASE ───────────────────────────────── */
 const SUPABASE_URL = 'https://oajhwwplkmwdwljokhvk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hamh3d3Bsa213ZHdsam9raHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDcxMjcsImV4cCI6MjA5NjQyMzEyN30.M7msv2z_hgpYfjcH0JdWkPUb3olKv66cr7YyJ_fQIqo';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
+let sessionReady = false;
 let userPreferences = { umbral_magnitud: 5.0, ciudad: '', zona_interes: '' };
-
-if (sessionStorage.getItem('introVisto') || 
-    window.location.hash.includes('access_token') || 
-    window.location.search.includes('code=')) {
-  document.getElementById('intro-overlay').style.display = 'none';
-  document.getElementById('app').classList.remove('hidden');
-}
 
 /* ─── INTRO ──────────────────────────────── */
 const overlay  = document.getElementById('intro-overlay');
@@ -30,9 +31,11 @@ const video    = document.getElementById('intro-video');
 const btnEnter = document.getElementById('btn-enter');
 const appEl    = document.getElementById('app');
 
-video.addEventListener('ended', () => btnEnter.classList.add('visible'));
-video.addEventListener('error', () => btnEnter.classList.add('visible'));
-setTimeout(() => btnEnter.classList.contains('visible') || btnEnter.classList.add('visible'), 8000);
+if (video) {
+  video.addEventListener('ended', () => btnEnter.classList.add('visible'));
+  video.addEventListener('error', () => btnEnter.classList.add('visible'));
+  setTimeout(() => btnEnter.classList.contains('visible') || btnEnter.classList.add('visible'), 8000);
+}
 
 function enterApp() {
   sessionStorage.setItem('introVisto', 'true');
@@ -44,16 +47,12 @@ function enterApp() {
   }, { once: true });
   initDashboard();
 
-  // Mostrar modal de login si no hay sesión activa
-  sb.auth.getSession().then(({ data: { session } }) => {
-    if (!session) {
-      document.getElementById('auth-modal')?.classList.remove('hidden');
-    } else {
-      currentUser = session.user;
-      loadUserPreferences();
-      showUserMenu();
-    }
-  });
+  if (sessionReady && !currentUser) {
+    document.getElementById('auth-modal')?.classList.remove('hidden');
+  } else if (sessionReady && currentUser) {
+    loadUserPreferences();
+    showUserMenu();
+  }
 }
 
 /* ─── DATOS GLOBALES ──────────────────────── */
@@ -77,19 +76,16 @@ function initMap() {
 /* ─── CARGAR DATOS ───────────────────────── */
 async function loadData() {
   const btn = document.querySelector('.btn-refresh');
-  btn.classList.add('spinning');
+  if (btn) btn.classList.add('spinning');
 
   const minMag = document.getElementById('filter-mag').value;
 
   try {
-    // Intenta usar el backend FastAPI primero
     const res  = await fetch(`${BACKEND_URL}/sismos?minmagnitud=${minMag}&limite=150`);
     if (!res.ok) throw new Error('Backend no disponible');
     const json = await res.json();
 
-    // El backend devuelve { total, sismos, generado }
     allQuakes = json.sismos.map(s => ({
-      // Normaliza al mismo formato que usaba el frontend
       properties: {
         mag:   s.magnitud,
         place: s.lugar,
@@ -106,7 +102,6 @@ async function loadData() {
     console.log(`✓ Datos desde backend FastAPI (${allQuakes.length} sismos)`);
 
   } catch (e) {
-    // Fallback directo a USGS si el backend no está disponible
     console.warn('Backend no disponible, usando USGS directo:', e.message);
     const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=-1day&minmagnitude=${minMag}&orderby=time&limit=150`;
     const res  = await fetch(url);
@@ -117,7 +112,7 @@ async function loadData() {
 
   renderAll();
   updateLastUpdate();
-  btn.classList.remove('spinning');
+  if (btn) btn.classList.remove('spinning');
 }
 
 function applyFilters() { loadData(); }
@@ -277,36 +272,25 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.getElementById('page-title').textContent =
       { dashboard:'Dashboard', map:'Mapa Global', history:'Historial', alerts:'Alertas' }[view] || view;
 
-    // Mostrar/ocultar paneles según vista
     const prefsPanel = document.getElementById('prefs-panel');
     const historyPanel = document.getElementById('history-panel');
 
     if (view === 'history') {
       prefsPanel?.classList.remove('hidden');
       historyPanel?.classList.remove('hidden');
-      loadHistory();
+      if (!currentUser) {
+        document.getElementById('auth-modal')?.classList.remove('hidden');
+      } else {
+        loadHistory();
+      }
     } else {
       prefsPanel?.classList.add('hidden');
       historyPanel?.classList.add('hidden');
-    }
-
-    // Mostrar modal de login si no hay sesión
-    if (view === 'history' && !currentUser) {
-      document.getElementById('auth-modal')?.classList.remove('hidden');
     }
   });
 });
 
 /* ─── AUTH ───────────────────────────────── */
-let authMode = 'login';
-
-function switchTab(mode) {
-  authMode = mode;
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('auth-error').classList.add('hidden');
-}
-
 async function handleAuth() {
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
@@ -353,7 +337,7 @@ async function savePreferences() {
 }
 
 async function saveQuake(quake) {
-  if (!currentUser) { alert('Inicia sesión para guardar sismos.'); return; }
+  if (!currentUser) return;
   await sb.from('quake_history').insert({
     user_id: currentUser.id,
     quake_id: quake.id,
@@ -365,11 +349,10 @@ async function saveQuake(quake) {
     longitud: quake.geometry.coordinates[0],
     profundidad_km: quake.geometry.coordinates[2]
   });
-  alert('Sismo guardado en tu historial.');
 }
 
 async function loadHistory() {
-  if (!currentUser) { alert('Inicia sesión para ver tu historial.'); return; }
+  if (!currentUser) return;
   const { data } = await sb
     .from('quake_history')
     .select('*')
@@ -412,13 +395,20 @@ function showUserMenu() {
 async function logout() {
   await sb.auth.signOut();
   currentUser = null;
+  sessionStorage.removeItem('introVisto');
   document.getElementById('user-menu')?.remove();
 }
 
 /* ─── INIT AUTH ──────────────────────────── */
 sb.auth.getSession().then(({ data: { session } }) => {
+  sessionReady = true;
   if (session?.user) {
     currentUser = session.user;
     loadUserPreferences();
+    showUserMenu();
+  }
+  // Si la app ya está visible (vino de OAuth redirect), inicializar dashboard
+  if (!appEl.classList.contains('hidden')) {
+    initDashboard();
   }
 });
