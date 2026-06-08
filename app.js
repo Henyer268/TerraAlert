@@ -341,29 +341,29 @@ function renderAlerts() {
   }
 
   grid.innerHTML = severe.map(f => {
-    const mag   = f.properties.mag || 0;
-    const place = f.properties.place || 'Desconocido';
-    const time  = new Date(f.properties.time);
-    const depth = f.geometry.coordinates[2]?.toFixed(0) || '?';
-    const url   = f.properties.url || '#';
+    const mag     = f.properties.mag || 0;
+    const place   = f.properties.place || 'Desconocido';
+    const time    = new Date(f.properties.time);
+    const depth   = f.geometry.coordinates[2]?.toFixed(0) || '?';
+    const url     = f.properties.url || '#';
     const tsunami = f.properties.tsunami;
-    const cls   = alertCardClass(mag);
-    const label = alertClasLabel(mag);
+    const cls     = alertCardClass(mag);
+    const label   = alertClasLabel(mag);
 
     return `
       <div class="alert-card ${cls}">
-        <div class="alert-card-header">
+        <div class="alert-card-left">
           <div class="alert-mag">M ${mag.toFixed(1)}</div>
-          <div class="alert-card-badges">
-            <span class="alert-clas-badge">${label}</span>
-            ${tsunami ? '<span class="alert-tsunami-badge">⚠ TSUNAMI</span>' : ''}
-          </div>
+          <span class="alert-clas-badge">${label}</span>
+          ${tsunami ? '<span class="alert-tsunami-badge">⚠ TSUNAMI</span>' : ''}
         </div>
-        <div class="alert-card-place">${place}</div>
-        <div class="alert-card-meta">
-          <span class="alert-card-time">${timeAgo(time)}</span>
-          <span class="alert-card-depth">Prof. ${depth} km</span>
-          ${url !== '#' ? `<a class="alert-card-link" href="${url}" target="_blank" rel="noopener">USGS ↗</a>` : ''}
+        <div class="alert-card-right">
+          <div class="alert-card-place" title="${place}">${place}</div>
+          <div class="alert-card-meta">
+            <span class="alert-card-time">${timeAgo(time)}</span>
+            <span class="alert-card-depth">↓ ${depth} km</span>
+            ${url !== '#' ? `<a class="alert-card-link" href="${url}" target="_blank" rel="noopener">USGS ↗</a>` : ''}
+          </div>
         </div>
       </div>
     `;

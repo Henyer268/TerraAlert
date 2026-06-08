@@ -532,24 +532,31 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   50%      { box-shadow: 0 0 18px rgba(255,34,0,0.25); }
 }
 
-/* Cabecera de tarjeta */
-.alert-card-header {
-  display: flex; align-items: center; justify-content: space-between;
+/* Tarjeta: layout horizontal — mag a la izq, info a la derecha */
+.alert-card {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 16px !important;
+  padding: 14px 16px !important;
+}
+.alert-card-left {
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0; min-width: 72px;
 }
 .alert-mag {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 44px; line-height: 1; letter-spacing: 2px;
+  font-size: 34px; line-height: 1; letter-spacing: 1px;
 }
 .alert-card--fuerte .alert-mag { color: #facc15; }
 .alert-card--mayor  .alert-mag { color: var(--amber); }
 .alert-card--gran   .alert-mag { color: #ff6600; }
-.alert-card--epic   .alert-mag { color: #ff2200; text-shadow: 0 0 20px rgba(255,34,0,0.6); }
+.alert-card--epic   .alert-mag { color: #ff2200; text-shadow: 0 0 16px rgba(255,34,0,0.6); }
 
-.alert-card-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .alert-clas-badge {
-  font-family: 'Share Tech Mono', monospace; font-size: 9px;
-  letter-spacing: 2px; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 3px;
+  font-family: 'Share Tech Mono', monospace; font-size: 8px;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; margin-top: 4px;
+  white-space: nowrap;
 }
 .alert-card--fuerte .alert-clas-badge { color: #facc15; border: 1px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.08); }
 .alert-card--mayor  .alert-clas-badge { color: var(--amber); border: 1px solid rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
@@ -557,19 +564,23 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .alert-card--epic   .alert-clas-badge { color: #ff2200; border: 1px solid rgba(255,34,0,0.5); background: rgba(255,34,0,0.15); }
 
 .alert-tsunami-badge {
-  font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+  font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 1px;
   color: var(--blue); border: 1px solid rgba(96,165,250,0.4);
-  background: rgba(96,165,250,0.1); padding: 3px 8px; border-radius: 3px;
+  background: rgba(96,165,250,0.1); padding: 2px 6px; border-radius: 3px;
+  margin-top: 4px;
 }
 
-/* Cuerpo de tarjeta */
+/* Info derecha */
+.alert-card-right {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
 .alert-card-place {
   font-size: 13px; color: var(--text); line-height: 1.4;
-  font-weight: 500;
+  font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .alert-card-meta {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-top: 8px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
 .alert-card-time {
   font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted2);
@@ -580,7 +591,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .alert-card-link {
   font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
   color: var(--muted); text-decoration: none; transition: color .2s;
-  padding: 3px 8px; border: 1px solid var(--border); border-radius: 3px;
+  padding: 2px 7px; border: 1px solid var(--border); border-radius: 3px;
+  margin-left: auto;
 }
 .alert-card-link:hover { color: var(--blue); border-color: var(--blue); }
 
