@@ -187,6 +187,20 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   display: grid; grid-template-columns: 1fr 380px; gap: 12px;
   padding: 0 24px 16px; flex: 1; min-height: 0;
 }
+.content-grid--full {
+  grid-template-columns: 1fr;
+}
+
+/* MAPA FULL (vista map) */
+.map-fullview {
+  padding: 0 24px 16px; flex: 1; min-height: 0; display: flex; flex-direction: column;
+}
+.map-panel--full {
+  flex: 1; min-height: 0;
+}
+.map-panel--full #map {
+  flex: 1; min-height: 0; height: 100%;
+}
 
 /* PANELS */
 .map-panel, .table-panel {
@@ -391,6 +405,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   .content-grid { grid-template-columns: 1fr; padding: 0 14px 14px; }
 
   #map { height: 280px; }
+  .map-fullview { padding: 0 14px 14px; }
+  .map-panel--full #map { height: calc(100vh - 220px); }
 
   .prefs-grid { grid-template-columns: 1fr; }
   .prefs-panel { margin: 0 14px 10px; }

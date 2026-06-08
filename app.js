@@ -263,6 +263,36 @@ function updateLastUpdate() {
 }
 
 /* ─── NAVEGACIÓN ─────────────────────────── */
+let mapInitialized = false;
+
+function showView(view) {
+  const dashTable  = document.getElementById('dashboard-table');
+  const statsGrid  = document.querySelector('.stats-grid');
+  const mapSection = document.getElementById('map-section');
+  const prefsPanel = document.getElementById('prefs-panel');
+
+  // Ocultar todo primero
+  dashTable?.classList.add('hidden');
+  statsGrid?.classList.add('hidden');
+  mapSection?.classList.add('hidden');
+  prefsPanel?.classList.add('hidden');
+
+  if (view === 'dashboard') {
+    statsGrid?.classList.remove('hidden');
+    dashTable?.classList.remove('hidden');
+
+  } else if (view === 'map') {
+    statsGrid?.classList.remove('hidden');
+    mapSection?.classList.remove('hidden');
+    // Leaflet necesita invalidar tamaño si el contenedor estuvo oculto
+    if (map) setTimeout(() => map.invalidateSize(), 50);
+
+  } else if (view === 'alerts') {
+    statsGrid?.classList.remove('hidden');
+    dashTable?.classList.remove('hidden');
+  }
+}
+
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', e => {
     e.preventDefault();
@@ -270,23 +300,8 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     const view = item.dataset.view;
     document.getElementById('page-title').textContent =
-      { dashboard:'Dashboard', map:'Mapa Global', history:'Historial', alerts:'Alertas' }[view] || view;
-
-    const prefsPanel = document.getElementById('prefs-panel');
-    const historyPanel = document.getElementById('history-panel');
-
-    if (view === 'history') {
-      prefsPanel?.classList.remove('hidden');
-      historyPanel?.classList.remove('hidden');
-      if (!currentUser) {
-        document.getElementById('auth-modal')?.classList.remove('hidden');
-      } else {
-        loadHistory();
-      }
-    } else {
-      prefsPanel?.classList.add('hidden');
-      historyPanel?.classList.add('hidden');
-    }
+      { dashboard:'Dashboard', map:'Mapa Global', alerts:'Alertas' }[view] || view;
+    showView(view);
   });
 });
 
