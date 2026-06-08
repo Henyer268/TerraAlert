@@ -12,7 +12,7 @@ const BACKEND_URL = window.location.hostname === 'localhost' || window.location.
   /* ─── SUPABASE ───────────────────────────────── */
 const SUPABASE_URL = 'https://oajhwwplkmwdwljokhvk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hamh3d3Bsa213ZHdsam9raHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDcxMjcsImV4cCI6MjA5NjQyMzEyN30.M7msv2z_hgpYfjcH0JdWkPUb3olKv66cr7YyJ_fQIqo';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 let userPreferences = { umbral_magnitud: 5.0, ciudad: '', zona_interes: '' };
@@ -37,7 +37,7 @@ function enterApp() {
   initDashboard();
 
   // Mostrar modal de login si no hay sesión activa
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  sb.auth.getSession().then(({ data: { session } }) => {
     if (!session) {
       document.getElementById('auth-modal')?.classList.remove('hidden');
     } else {
@@ -312,9 +312,9 @@ async function handleAuth() {
 
   let result;
   if (authMode === 'login') {
-    result = await supabase.auth.signInWithPassword({ email, password });
+    result = await sb.auth.signInWithPassword({ email, password });
   } else {
-    result = await supabase.auth.signUp({ email, password });
+    result = await sb.auth.signUp({ email, password });
   }
 
   if (result.error) {
@@ -335,7 +335,7 @@ function skipAuth() {
 
 async function loadUserPreferences() {
   if (!currentUser) return;
-  const { data } = await supabase
+  const { data } = await sb
     .from('user_preferences')
     .select('*')
     .eq('user_id', currentUser.id)
@@ -359,14 +359,14 @@ async function savePreferences() {
     updated_at: new Date().toISOString()
   };
 
-  await supabase.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
+  await sb.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
   userPreferences = prefs;
   alert('Preferencias guardadas.');
 }
 
 async function saveQuake(quake) {
   if (!currentUser) { alert('Inicia sesión para guardar sismos.'); return; }
-  await supabase.from('quake_history').insert({
+  await sb.from('quake_history').insert({
     user_id: currentUser.id,
     quake_id: quake.id,
     magnitud: quake.properties.mag,
@@ -382,7 +382,7 @@ async function saveQuake(quake) {
 
 async function loadHistory() {
   if (!currentUser) { alert('Inicia sesión para ver tu historial.'); return; }
-  const { data } = await supabase
+  const { data } = await sb
     .from('quake_history')
     .select('*')
     .eq('user_id', currentUser.id)
@@ -422,13 +422,13 @@ function showUserMenu() {
 }
 
 async function logout() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   currentUser = null;
   document.getElementById('user-menu')?.remove();
 }
 
 /* ─── INIT AUTH ──────────────────────────── */
-supabase.auth.getSession().then(({ data: { session } }) => {
+sb.auth.getSession().then(({ data: { session } }) => {
   if (session?.user) {
     currentUser = session.user;
     loadUserPreferences();
