@@ -262,20 +262,126 @@ function updateLastUpdate() {
     `Actualizado: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
 
+/* ─── SONIDO ──────────────────────────────── */
+let soundEnabled = true;
+let audioCtx = null;
+let alertSoundPlayed = false;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playAlertSound(level) {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioCtx();
+    // Secuencia de tonos tipo "alerta de emergencia"
+    const notes = level >= 7
+      ? [880, 660, 880, 660, 880]   // épico/gran: más frenético
+      : [660, 440, 550];             // fuerte/mayor: dos pulsos
+    let t = ctx.currentTime;
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.start(t); osc.stop(t + 0.25);
+      t += 0.3;
+    });
+  } catch(e) { /* contexto de audio no disponible */ }
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('sound-icon-on').classList.toggle('hidden', !soundEnabled);
+  document.getElementById('sound-icon-off').classList.toggle('hidden', soundEnabled);
+  document.getElementById('sound-label').textContent = soundEnabled ? 'SFX: ON' : 'SFX: OFF';
+  document.getElementById('alert-sound-btn').classList.toggle('active', soundEnabled);
+  if (soundEnabled) playAlertSound(5); // preview
+}
+
+/* ─── RENDER ALERTAS ─────────────────────── */
+function alertCardClass(mag) {
+  if (mag >= 8.0) return 'alert-card--epic';
+  if (mag >= 7.0) return 'alert-card--gran';
+  if (mag >= 6.0) return 'alert-card--mayor';
+  return 'alert-card--fuerte';
+}
+
+function alertClasLabel(mag) {
+  if (mag >= 8.0) return 'ÉPICO';
+  if (mag >= 7.0) return 'GRAN SISMO';
+  if (mag >= 6.0) return 'MAYOR';
+  return 'FUERTE';
+}
+
+function renderAlerts() {
+  const severe = allQuakes.filter(f => (f.properties.mag || 0) >= 5.0)
+    .sort((a, b) => b.properties.mag - a.properties.mag);
+
+  const grid = document.getElementById('alerts-grid');
+  const countEl = document.getElementById('alert-banner-count');
+  countEl.textContent = `${severe.length} evento${severe.length !== 1 ? 's' : ''} crítico${severe.length !== 1 ? 's' : ''}`;
+
+  if (!severe.length) {
+    grid.innerHTML = '<div class="alerts-empty">Sin alertas activas en las últimas 24h</div>';
+    return;
+  }
+
+  // Sonido si hay sismos ≥ 6.0 nuevos
+  const maxSevere = severe[0]?.properties.mag || 0;
+  if (!alertSoundPlayed && maxSevere >= 6.0) {
+    playAlertSound(maxSevere);
+    alertSoundPlayed = true;
+  }
+
+  grid.innerHTML = severe.map(f => {
+    const mag   = f.properties.mag || 0;
+    const place = f.properties.place || 'Desconocido';
+    const time  = new Date(f.properties.time);
+    const depth = f.geometry.coordinates[2]?.toFixed(0) || '?';
+    const url   = f.properties.url || '#';
+    const tsunami = f.properties.tsunami;
+    const cls   = alertCardClass(mag);
+    const label = alertClasLabel(mag);
+
+    return `
+      <div class="alert-card ${cls}">
+        <div class="alert-card-header">
+          <div class="alert-mag">M ${mag.toFixed(1)}</div>
+          <div class="alert-card-badges">
+            <span class="alert-clas-badge">${label}</span>
+            ${tsunami ? '<span class="alert-tsunami-badge">⚠ TSUNAMI</span>' : ''}
+          </div>
+        </div>
+        <div class="alert-card-place">${place}</div>
+        <div class="alert-card-meta">
+          <span class="alert-card-time">${timeAgo(time)}</span>
+          <span class="alert-card-depth">Prof. ${depth} km</span>
+          ${url !== '#' ? `<a class="alert-card-link" href="${url}" target="_blank" rel="noopener">USGS ↗</a>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 /* ─── NAVEGACIÓN ─────────────────────────── */
-let mapInitialized = false;
-
 function showView(view) {
-  const dashTable  = document.getElementById('dashboard-table');
-  const statsGrid  = document.querySelector('.stats-grid');
-  const mapSection = document.getElementById('map-section');
-  const prefsPanel = document.getElementById('prefs-panel');
+  const dashTable    = document.getElementById('dashboard-table');
+  const statsGrid    = document.querySelector('.stats-grid');
+  const mapSection   = document.getElementById('map-section');
+  const alertSection = document.getElementById('alerts-section');
 
-  // Ocultar todo primero
+  // Ocultar todo
   dashTable?.classList.add('hidden');
   statsGrid?.classList.add('hidden');
   mapSection?.classList.add('hidden');
-  prefsPanel?.classList.add('hidden');
+  alertSection?.classList.add('hidden');
 
   if (view === 'dashboard') {
     statsGrid?.classList.remove('hidden');
@@ -284,12 +390,12 @@ function showView(view) {
   } else if (view === 'map') {
     statsGrid?.classList.remove('hidden');
     mapSection?.classList.remove('hidden');
-    // Leaflet necesita invalidar tamaño si el contenedor estuvo oculto
     if (map) setTimeout(() => map.invalidateSize(), 50);
 
   } else if (view === 'alerts') {
-    statsGrid?.classList.remove('hidden');
-    dashTable?.classList.remove('hidden');
+    alertSection?.classList.remove('hidden');
+    alertSoundPlayed = false; // permitir sonido al entrar a la vista
+    renderAlerts();
   }
 }
 
@@ -300,7 +406,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     const view = item.dataset.view;
     document.getElementById('page-title').textContent =
-      { dashboard:'Dashboard', map:'Mapa Global', alerts:'Alertas' }[view] || view;
+      { dashboard:'Dashboard', map:'Mapa Global', alerts:'Alertas Sísmicas' }[view] || view;
     showView(view);
   });
 });
@@ -314,6 +420,10 @@ async function handleAuth() {
     }
   });
   if (error) console.error(error);
+}
+
+function skipAuth() {
+  document.getElementById('auth-modal').classList.add('hidden');
 }
 
 async function loadUserPreferences() {

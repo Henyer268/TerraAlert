@@ -411,3 +411,184 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   .prefs-grid { grid-template-columns: 1fr; }
   .prefs-panel { margin: 0 14px 10px; }
 }
+/* ═══════════════════════════════════════════
+   VISTA ALERTAS
+   ═══════════════════════════════════════════ */
+
+.alerts-fullview {
+  padding: 0 24px 16px;
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+}
+
+/* Banner superior */
+.alert-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(90deg, rgba(204,34,0,0.15) 0%, rgba(13,13,24,0) 100%);
+  border: 1px solid rgba(204,34,0,0.4);
+  border-radius: 8px; padding: 14px 20px;
+  flex-shrink: 0;
+}
+.alert-banner-left { display: flex; align-items: center; gap: 12px; }
+.alert-banner-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--red);
+  box-shadow: 0 0 10px var(--red), 0 0 20px rgba(204,34,0,0.5);
+  animation: blink 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.alert-banner-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; letter-spacing: 4px; color: var(--text);
+}
+.alert-banner-right { display: flex; align-items: center; gap: 14px; }
+.alert-banner-count {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; color: #ff6644; letter-spacing: 1px;
+}
+.alert-sound-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--muted2); border-radius: 5px; padding: 5px 12px;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; cursor: pointer; transition: all .2s;
+}
+.alert-sound-btn:hover { color: var(--text); border-color: var(--amber); }
+.alert-sound-btn.active { color: var(--amber); border-color: var(--amber); }
+
+/* Barra de niveles */
+.alert-levels-bar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 8px 4px; flex-shrink: 0;
+}
+.alevel {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; padding: 3px 10px; border-radius: 3px;
+}
+.alevel--epic  { color: #ff2200; background: rgba(255,34,0,0.12); border: 1px solid rgba(255,34,0,0.3); }
+.alevel--gran  { color: #ff6600; background: rgba(255,102,0,0.1); border: 1px solid rgba(255,102,0,0.25); }
+.alevel--mayor { color: var(--amber); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); }
+.alevel--fuerte{ color: #facc15; background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2); }
+.alevel--sep   { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+
+/* Grid de tarjetas */
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+.alerts-empty {
+  grid-column: 1 / -1; text-align: center;
+  padding: 60px; color: var(--muted);
+  font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 1px;
+}
+
+/* Tarjeta de alerta */
+.alert-card {
+  background: var(--bg2); border-radius: 8px;
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;
+  transition: transform .2s, box-shadow .2s;
+  position: relative; overflow: hidden;
+  cursor: default;
+}
+.alert-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 8px 0 0 8px;
+}
+.alert-card:hover { transform: translateY(-2px); }
+
+/* Variantes por nivel */
+.alert-card--fuerte {
+  border: 1px solid rgba(250,204,21,0.2);
+}
+.alert-card--fuerte::before { background: #facc15; }
+.alert-card--fuerte:hover { box-shadow: 0 4px 20px rgba(250,204,21,0.1); }
+
+.alert-card--mayor {
+  border: 1px solid rgba(245,158,11,0.35);
+}
+.alert-card--mayor::before { background: var(--amber); }
+.alert-card--mayor:hover { box-shadow: 0 4px 20px rgba(245,158,11,0.15); }
+
+.alert-card--gran {
+  border: 1px solid rgba(255,102,0,0.4);
+  background: rgba(20,10,5,0.9);
+}
+.alert-card--gran::before { background: #ff6600; }
+.alert-card--gran:hover { box-shadow: 0 4px 24px rgba(255,102,0,0.2); }
+
+.alert-card--epic {
+  border: 1px solid rgba(255,34,0,0.6);
+  background: rgba(25,5,5,0.95);
+  animation: pulse-epic 2s ease-in-out infinite;
+}
+.alert-card--epic::before { background: #ff2200; box-shadow: 0 0 8px #ff2200; }
+.alert-card--epic:hover { box-shadow: 0 4px 30px rgba(255,34,0,0.35); }
+
+@keyframes pulse-epic {
+  0%,100% { box-shadow: 0 0 0 rgba(255,34,0,0); }
+  50%      { box-shadow: 0 0 18px rgba(255,34,0,0.25); }
+}
+
+/* Cabecera de tarjeta */
+.alert-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.alert-mag {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 44px; line-height: 1; letter-spacing: 2px;
+}
+.alert-card--fuerte .alert-mag { color: #facc15; }
+.alert-card--mayor  .alert-mag { color: var(--amber); }
+.alert-card--gran   .alert-mag { color: #ff6600; }
+.alert-card--epic   .alert-mag { color: #ff2200; text-shadow: 0 0 20px rgba(255,34,0,0.6); }
+
+.alert-card-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.alert-clas-badge {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 3px;
+}
+.alert-card--fuerte .alert-clas-badge { color: #facc15; border: 1px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.08); }
+.alert-card--mayor  .alert-clas-badge { color: var(--amber); border: 1px solid rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+.alert-card--gran   .alert-clas-badge { color: #ff6600; border: 1px solid rgba(255,102,0,0.35); background: rgba(255,102,0,0.1); }
+.alert-card--epic   .alert-clas-badge { color: #ff2200; border: 1px solid rgba(255,34,0,0.5); background: rgba(255,34,0,0.15); }
+
+.alert-tsunami-badge {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+  color: var(--blue); border: 1px solid rgba(96,165,250,0.4);
+  background: rgba(96,165,250,0.1); padding: 3px 8px; border-radius: 3px;
+}
+
+/* Cuerpo de tarjeta */
+.alert-card-place {
+  font-size: 13px; color: var(--text); line-height: 1.4;
+  font-weight: 500;
+}
+.alert-card-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 8px; border-top: 1px solid var(--border);
+}
+.alert-card-time {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted2);
+}
+.alert-card-depth {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted);
+}
+.alert-card-link {
+  font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+  color: var(--muted); text-decoration: none; transition: color .2s;
+  padding: 3px 8px; border: 1px solid var(--border); border-radius: 3px;
+}
+.alert-card-link:hover { color: var(--blue); border-color: var(--blue); }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .alerts-fullview { padding: 0 14px 14px; }
+  .alerts-grid { grid-template-columns: 1fr; }
+  .alert-banner { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .alert-banner-title { font-size: 14px; }
+  .alert-levels-bar { gap: 8px; }
+}
