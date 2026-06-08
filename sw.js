@@ -3,7 +3,7 @@
    Cache offline + Push Notifications
    ═══════════════════════════════════════════ */
 
-const VERSION     = 'v1.2';
+const VERSION     = 'v1.3';
 const CACHE_SHELL = `terraalert-shell-${VERSION}`;
 const CACHE_DATA  = `terraalert-data-${VERSION}`;
 
@@ -14,8 +14,8 @@ const SHELL_ASSETS = [
   '/style.css',
   '/app.js',
   '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/public/icon-192.png',
+  '/public/icon-512.png',
   /* CDN externos — se precargan para funcionar offline */
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
@@ -166,8 +166,8 @@ self.addEventListener('push', event => {
   try { data = { ...data, ...event.data.json() }; } catch {}
 
   const mag   = data.mag || 0;
-  const icon  = mag >= 7 ? '/icons/icon-alert-red.png' : '/icons/icon-192.png';
-  const badge = '/icons/icon-96.png';
+  const icon  = mag >= 7 ? '/public/icon-512.png' : '/public/icon-192.png';
+const badge = '/public/icon-96.png';
 
   const title   = data.title || `🌍 Sismo M ${mag.toFixed(1)}`;
   const options = {
