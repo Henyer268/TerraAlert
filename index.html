@@ -14,19 +14,16 @@
      ══════════════════════════════════════ -->
 <div id="auth-modal" class="auth-modal hidden">
   <div class="auth-box">
-    <div class="auth-logo">
-      <span class="brand-terra">TERRA</span><span class="brand-alert">ALERT</span>
-    </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchTab('login')">Iniciar sesión</button>
-      <button class="auth-tab" onclick="switchTab('register')">Registrarse</button>
-    </div>
-    <div id="auth-error" class="auth-error hidden"></div>
-    <input id="auth-email" type="email" placeholder="Correo electrónico" class="auth-input" />
-    <input id="auth-password" type="password" placeholder="Contraseña" class="auth-input" />
-    <button class="auth-btn" onclick="handleAuth()">Entrar</button>
-    <button class="auth-skip" onclick="skipAuth()">Continuar sin cuenta</button>
+  <div class="auth-logo">
+    <span class="brand-terra">TERRA</span><span class="brand-alert">ALERT</span>
   </div>
+  <p style="color:#aaa;text-align:center;margin-bottom:20px;">Inicia sesión para guardar tu historial y preferencias</p>
+  <button class="auth-btn" onclick="handleAuth()">
+    <img src="https://www.google.com/favicon.ico" width="18" style="vertical-align:middle;margin-right:8px;">
+    Continuar con Google
+  </button>
+  <button class="auth-skip" onclick="skipAuth()">Continuar sin cuenta</button>
+</div>
 </div>
 
   <!-- ══════════════════════════════════════

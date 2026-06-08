@@ -300,33 +300,13 @@ function switchTab(mode) {
 }
 
 async function handleAuth() {
-  const email = document.getElementById('auth-email').value.trim();
-  const password = document.getElementById('auth-password').value.trim();
-  const errorEl = document.getElementById('auth-error');
-
-  if (!email || !password) {
-    errorEl.textContent = 'Ingresa correo y contraseña.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
-
-  let result;
-  if (authMode === 'login') {
-    result = await sb.auth.signInWithPassword({ email, password });
-  } else {
-    result = await sb.auth.signUp({ email, password });
-  }
-
-  if (result.error) {
-    errorEl.textContent = result.error.message;
-    errorEl.classList.remove('hidden');
-    return;
-  }
-
-  currentUser = result.data.user;
-  document.getElementById('auth-modal').classList.add('hidden');
-  await loadUserPreferences();
-  showUserMenu();
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'https://terra-alert-jade.vercel.app'
+    }
+  });
+  if (error) console.error(error);
 }
 
 function skipAuth() {
