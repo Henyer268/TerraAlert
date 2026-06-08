@@ -316,10 +316,6 @@ async function handleAuth() {
   if (error) console.error(error);
 }
 
-function skipAuth() {
-  document.getElementById('auth-modal').classList.add('hidden');
-}
-
 async function loadUserPreferences() {
   if (!currentUser) return;
   const { data } = await sb
