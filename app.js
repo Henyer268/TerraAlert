@@ -65,6 +65,7 @@ function initDashboard() {
   initMap();
   loadData();
   setInterval(loadData, 5 * 60 * 1000);
+  setInterval(checkSevereQuakes, 5 * 60 * 1000);
 }
 
 /* ─── MAPA LEAFLET ───────────────────────── */
@@ -116,6 +117,23 @@ async function loadData() {
 }
 
 function applyFilters() { loadData(); }
+async function checkSevereQuakes() {
+  const severe = allQuakes.filter(f => (f.properties.mag || 0) >= 6.0);
+  if (!severe.length) return;
+
+  const top = severe[0];
+  await fetch(`${BACKEND_URL}/push/notify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: `🌍 Sismo M ${top.properties.mag.toFixed(1)}`,
+      body:  top.properties.place || 'Ver detalles en terraALERT',
+      mag:   top.properties.mag,
+      id:    top.id,
+      url:   top.properties.url || '/'
+    })
+  });
+}
 
 /* ─── RENDER ─────────────────────────────── */
 function renderAll() {
