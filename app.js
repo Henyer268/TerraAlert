@@ -17,6 +17,13 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userPreferences = { umbral_magnitud: 5.0, ciudad: '', zona_interes: '' };
 
+if (sessionStorage.getItem('introVisto') || 
+    window.location.hash.includes('access_token') || 
+    window.location.search.includes('code=')) {
+  document.getElementById('intro-overlay').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+}
+
 /* ─── INTRO ──────────────────────────────── */
 const overlay  = document.getElementById('intro-overlay');
 const video    = document.getElementById('intro-video');
@@ -28,6 +35,7 @@ video.addEventListener('error', () => btnEnter.classList.add('visible'));
 setTimeout(() => btnEnter.classList.contains('visible') || btnEnter.classList.add('visible'), 8000);
 
 function enterApp() {
+  sessionStorage.setItem('introVisto', 'true');
   overlay.classList.add('fade-out');
   appEl.classList.remove('hidden');
   overlay.addEventListener('transitionend', () => {
