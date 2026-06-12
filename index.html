@@ -171,12 +171,26 @@
       <!-- MAPA GLOBAL -->
       <section id="map-section" class="map-fullview hidden">
         <div class="map-panel map-panel--full">
-          <div class="panel-header">
-            <span class="panel-title">Mapa Sísmico Global</span>
-            <span class="panel-tag">TIEMPO REAL</span>
-          </div>
-          <div id="map"></div>
-        </div>
+  <div class="panel-header">
+    <span class="panel-title">Mapa Sísmico Global</span>
+    <span class="panel-tag">TIEMPO REAL</span>
+  </div>
+  <!-- BUSCADOR -->
+  <div class="map-search-bar">
+    <input id="map-search-input" class="map-search-input" type="text"
+      placeholder="Buscar ciudad, país, región…"
+      onkeydown="if(event.key==='Enter') searchLocation()" />
+    <button class="map-search-btn" onclick="searchLocation()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      BUSCAR
+    </button>
+    <button class="map-search-clear hidden" id="map-search-clear" onclick="clearMapSearch()">✕ LIMPIAR</button>
+  </div>
+  <div id="map-search-status" class="map-search-status hidden"></div>
+  <div id="map"></div>
+</div>
       </section>
 
       <!-- MI ZONA -->

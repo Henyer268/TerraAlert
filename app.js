@@ -583,3 +583,141 @@ sb.auth.getSession().then(({ data: { session } }) => {
     initDashboard();
   }
 });
+
+/* ─── BUSCADOR DEL MAPA (Nominatim) ────────── */
+let searchMarker = null;
+let activeSearch = null; // { lat, lng, label }
+
+async function searchLocation() {
+  const input  = document.getElementById('map-search-input');
+  const status = document.getElementById('map-search-status');
+  const query  = input.value.trim();
+  if (!query) return;
+
+  // Mostrar estado cargando
+  status.className = 'map-search-status loading';
+  status.textContent = '⟳ Buscando…';
+  status.classList.remove('hidden');
+
+  try {
+    const res  = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'es' } }
+    );
+    const data = await res.json();
+
+    if (!data.length) {
+      status.className = 'map-search-status error';
+      status.textContent = '✕ Ubicación no encontrada';
+      return;
+    }
+
+    const { lat, lon, display_name } = data[0];
+    const latN = parseFloat(lat);
+    const lngN = parseFloat(lon);
+
+    // Mover mapa
+    map.flyTo([latN, lngN], 6, { duration: 1.4 });
+
+    // Quitar marcador anterior
+    if (searchMarker) map.removeLayer(searchMarker);
+
+    // Marcador especial de búsqueda
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:14px;height:14px;border-radius:50%;
+        background:var(--blue);border:2px solid #fff;
+        box-shadow:0 0 10px rgba(96,165,250,0.7);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    searchMarker = L.marker([latN, lngN], { icon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#e2e2f0;background:#0d0d18;padding:2px;">
+          <b style="color:var(--blue)">📍 BÚSQUEDA</b><br>
+          ${display_name.split(',').slice(0, 3).join(',')}
+        </div>
+      `, { className: 'terra-popup' })
+      .openPopup();
+
+    // Guardar búsqueda activa
+    activeSearch = { lat: latN, lng: lngN, label: display_name };
+
+    // Actualizar stats con sismos cercanos
+    updateStatsForZone(latN, lngN);
+
+    // Mostrar botón limpiar y estado
+    document.getElementById('map-search-clear').classList.remove('hidden');
+    status.className = 'map-search-status found';
+    const shortName = display_name.split(',').slice(0, 2).join(',');
+    status.textContent = `✓ ${shortName} — sismos en radio 500 km`;
+
+  } catch (e) {
+    status.className = 'map-search-status error';
+    status.textContent = '✕ Error al buscar. Intenta de nuevo.';
+  }
+}
+
+function clearMapSearch() {
+  // Quitar marcador
+  if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+
+  // Limpiar estado
+  activeSearch = null;
+  document.getElementById('map-search-input').value = '';
+  document.getElementById('map-search-clear').classList.add('hidden');
+  document.getElementById('map-search-status').classList.add('hidden');
+
+  // Volver al mapa global y stats globales
+  map.flyTo([20, 0], 2, { duration: 1.2 });
+  renderStats(); // vuelve a las cards globales
+}
+
+/* Cards de stats filtradas por zona (radio 500km) */
+function updateStatsForZone(lat, lng) {
+  const radio = 500; // km
+  const nearby = allQuakes.filter(f => {
+    const [fLng, fLat] = f.geometry.coordinates;
+    return haversine(lat, lng, fLat, fLng) <= radio;
+  });
+
+  if (!nearby.length) {
+    document.getElementById('stat-total').textContent = '0';
+    document.getElementById('stat-total-sub').textContent = `radio ${radio} km`;
+    document.getElementById('stat-max').textContent = '—';
+    document.getElementById('stat-max-sub').textContent = 'sin datos';
+    document.getElementById('stat-avg').textContent = '—';
+    document.getElementById('stat-zone').textContent = '—';
+    document.getElementById('stat-zone-sub').textContent = `0 sismos cercanos`;
+    return;
+  }
+
+  const mags   = nearby.map(f => f.properties.mag).filter(Boolean);
+  const maxMag = Math.max(...mags);
+  const avgMag = (mags.reduce((a, b) => a + b, 0) / mags.length).toFixed(1);
+  const maxQ   = nearby.find(f => f.properties.mag === maxMag);
+  // Último evento
+  const lastQ  = nearby.sort((a, b) => b.properties.time - a.properties.time)[0];
+
+  document.getElementById('stat-total').textContent = nearby.length;
+  document.getElementById('stat-total-sub').textContent = `radio ${radio} km`;
+  document.getElementById('stat-max').textContent = maxMag.toFixed(1);
+  document.getElementById('stat-max-sub').textContent = maxQ ? shortPlace(maxQ.properties.place) : '';
+  document.getElementById('stat-avg').textContent = avgMag;
+  document.getElementById('stat-zone').textContent = shortPlace(lastQ.properties.place);
+  document.getElementById('stat-zone-sub').textContent = timeAgo(new Date(lastQ.properties.time));
+}
+
+/* Fórmula Haversine para distancia entre 2 coordenadas (km) */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R  = 6371;
+  const dL = (lat2 - lat1) * Math.PI / 180;
+  const dG = (lng2 - lng1) * Math.PI / 180;
+  const a  = Math.sin(dL/2)**2 +
+             Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dG/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}

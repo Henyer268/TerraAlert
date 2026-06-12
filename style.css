@@ -655,3 +655,44 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   .mizona-fullview { padding: 0 14px 14px; }
   .mizona-prefs-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── BUSCADOR DEL MAPA ──────────────────── */
+.map-search-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; background: var(--bg2);
+}
+.map-search-input {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 5px; padding: 7px 12px;
+  font-size: 12px; font-family: 'Share Tech Mono', monospace;
+  outline: none; letter-spacing: 0.5px;
+  transition: border-color .2s;
+}
+.map-search-input:focus { border-color: var(--blue); }
+.map-search-input::placeholder { color: var(--muted); }
+.map-search-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3); border: 1px solid var(--blue); color: var(--blue);
+  border-radius: 5px; padding: 7px 14px;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; cursor: pointer; white-space: nowrap;
+  transition: background .2s, color .2s;
+}
+.map-search-btn:hover { background: var(--blue); color: #000; }
+.map-search-clear {
+  background: transparent; border: 1px solid var(--border2); color: var(--muted2);
+  border-radius: 5px; padding: 7px 10px;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; cursor: pointer; white-space: nowrap;
+  transition: color .2s, border-color .2s;
+}
+.map-search-clear:hover { color: var(--red); border-color: var(--red); }
+.map-search-status {
+  padding: 6px 14px; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 1px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.map-search-status.loading { color: var(--muted2); }
+.map-search-status.found   { color: var(--green); }
+.map-search-status.error   { color: var(--red); }
