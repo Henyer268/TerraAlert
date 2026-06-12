@@ -696,3 +696,24 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .map-search-status.loading { color: var(--muted2); }
 .map-search-status.found   { color: var(--green); }
 .map-search-status.error   { color: var(--red); }
+
+/* ─── MI ZONA — buscador ─────────────────── */
+.mizona-search-row {
+  display: flex; gap: 8px; margin-bottom: 10px;
+}
+.mizona-search-input {
+  flex: 1; font-family: 'Share Tech Mono', monospace;
+}
+.mizona-zona-guardada {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  color: var(--amber); margin-bottom: 12px;
+  padding: 6px 10px; border-radius: 4px;
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+}
+.mizona-clear-btn {
+  margin-left: auto; background: transparent; border: none;
+  color: var(--muted2); font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; cursor: pointer; letter-spacing: 1px;
+}
+.mizona-clear-btn:hover { color: var(--red); }

@@ -207,69 +207,52 @@
           </div>
         </div>
 
-        <!-- Panel de preferencias -->
         <div class="mizona-prefs-panel">
-          <div class="mizona-prefs-title">CONFIGURAR MI ZONA</div>
-          <div class="mizona-prefs-grid">
+  <div class="mizona-prefs-title">CONFIGURAR MI ZONA</div>
 
-            <div class="pref-field">
-              <label class="pref-label">PAÍS DE INTERÉS</label>
-              <select class="pref-input" id="pref-pais" onchange="onPaisChange()">
-                <option value="">— Seleccionar país —</option>
-                <!-- Más sísmicos primero -->
-                <option value="Japan">Japón</option>
-                <option value="Indonesia">Indonesia</option>
-                <option value="Chile">Chile</option>
-                <option value="Philippines">Filipinas</option>
-                <option value="Mexico">México</option>
-                <option value="Iran">Irán</option>
-                <option value="Turkey">Turquía</option>
-                <option value="Peru">Perú</option>
-                <option value="United States">Estados Unidos</option>
-                <option value="Colombia">Colombia</option>
-                <option value="Ecuador">Ecuador</option>
-                <option value="New Zealand">Nueva Zelanda</option>
-                <option value="Greece">Grecia</option>
-                <option value="Italy">Italia</option>
-                <option value="Nepal">Nepal</option>
-                <option value="Afghanistan">Afganistán</option>
-                <option value="Pakistan">Pakistán</option>
-                <option value="Taiwan">Taiwán</option>
-                <option value="Russia">Rusia</option>
-                <option value="Argentina">Argentina</option>
-                <option value="Bolivia">Bolivia</option>
-                <option value="Venezuela">Venezuela</option>
-                <option value="Costa Rica">Costa Rica</option>
-                <option value="Guatemala">Guatemala</option>
-                <option value="Panama">Panamá</option>
-              </select>
-            </div>
+  <!-- Buscador libre -->
+  <div class="mizona-search-row">
+    <input
+      class="pref-input mizona-search-input"
+      id="mizona-search-input"
+      type="text"
+      placeholder="Buscar ciudad, país, región… Ej: Bogotá, Tokyo, Chile…"
+      onkeydown="if(event.key==='Enter') buscarMiZona()"
+    />
+    <button class="map-search-btn" onclick="buscarMiZona()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      BUSCAR
+    </button>
+  </div>
+  <div id="mizona-search-status" class="map-search-status hidden"></div>
 
-            <div class="pref-field">
-              <label class="pref-label">CIUDAD (OPCIONAL)</label>
-              <input class="pref-input" id="pref-ciudad" type="text" placeholder="Ej: Lima, Bogotá, Tokyo…" />
-            </div>
+  <!-- Zona guardada -->
+  <div class="mizona-zona-guardada hidden" id="mizona-zona-guardada">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11" style="color:var(--amber)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span id="mizona-zona-label">—</span>
+    <button class="mizona-clear-btn" onclick="limpiarMiZona()">✕ limpiar</button>
+  </div>
 
-            <div class="pref-field">
-              <label class="pref-label">MAGNITUD MÍNIMA</label>
-              <select class="pref-input" id="pref-umbral">
-                <option value="2.5">≥ 2.5 (todos)</option>
-                <option value="4.0">≥ 4.0</option>
-                <option value="5.0" selected>≥ 5.0 (significativos)</option>
-                <option value="6.0">≥ 6.0 (fuertes)</option>
-                <option value="7.0">≥ 7.0 (grandes)</option>
-              </select>
-            </div>
-
-          </div>
-          <div class="mizona-prefs-actions">
-            <button class="btn-save-prefs" onclick="savePreferences()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              GUARDAR PREFERENCIAS
-            </button>
-            <span class="pref-saved-msg hidden" id="pref-saved-msg">✓ Guardado</span>
-          </div>
-        </div>
+  <div class="mizona-prefs-actions">
+    <div class="pref-field" style="min-width:180px;">
+      <label class="pref-label">MAGNITUD MÍNIMA</label>
+      <select class="pref-input" id="pref-umbral" onchange="if(mizonaLat) loadMiZonaData()">
+        <option value="2.5">≥ 2.5 (todos)</option>
+        <option value="4.0">≥ 4.0</option>
+        <option value="5.0" selected>≥ 5.0 (significativos)</option>
+        <option value="6.0">≥ 6.0 (fuertes)</option>
+        <option value="7.0">≥ 7.0 (grandes)</option>
+      </select>
+    </div>
+    <button class="btn-save-prefs" onclick="savePreferences()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      GUARDAR ZONA
+    </button>
+    <span class="pref-saved-msg hidden" id="pref-saved-msg">✓ Zona guardada</span>
+  </div>
+</div>
 
         <!-- Stats de Mi Zona -->
         <div class="stats-grid mizona-stats" id="mizona-stats-grid" style="display:none;">
