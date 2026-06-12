@@ -577,4 +577,81 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px;
   margin-left: auto; transition: color .2s, border-color .2s;
 }
-.alert-card-link:hover { color: var(--blue); border-color: var(--blue); }
+/* ─── BOTÓN MI ZONA ──────────────────────── */
+.btn-mizona {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--muted2);
+  border-radius: 5px; padding: 6px 14px;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  letter-spacing: 1.5px; cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.btn-mizona:hover { color: var(--amber); border-color: rgba(245,158,11,.4); }
+.btn-mizona.active {
+  color: var(--amber); border-color: rgba(245,158,11,.5);
+  background: rgba(245,158,11,.07);
+}
+.btn-mizona.active svg { fill: var(--amber); stroke: var(--amber); }
+
+/* ─── VISTA MI ZONA ──────────────────────── */
+.mizona-fullview {
+  padding: 0 24px 16px; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+}
+
+.mizona-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+  background: linear-gradient(90deg, rgba(245,158,11,0.1) 0%, transparent 100%);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 8px; padding: 12px 16px;
+  flex-shrink: 0;
+}
+.mizona-header-left { display: flex; align-items: center; gap: 10px; }
+.mizona-header-right { display: flex; align-items: center; gap: 10px; }
+.mizona-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; letter-spacing: 3px; color: var(--text);
+}
+.mizona-user-tag {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--muted2); letter-spacing: 1px;
+}
+
+.mizona-prefs-panel {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 18px 20px; flex-shrink: 0;
+}
+.mizona-prefs-title {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  letter-spacing: 2px; color: var(--muted2); margin-bottom: 14px;
+  text-transform: uppercase;
+}
+.mizona-prefs-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;
+  margin-bottom: 14px;
+}
+.mizona-prefs-actions {
+  display: flex; align-items: center; gap: 12px;
+}
+.pref-saved-msg {
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  color: var(--green); letter-spacing: 1px;
+}
+
+.mizona-stats { padding: 0 !important; flex-shrink: 0; }
+
+.mizona-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+  color: var(--muted); font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 1px; text-align: center;
+  padding: 40px;
+}
+
+/* Responsive Mi Zona */
+@media (max-width: 768px) {
+  .mizona-fullview { padding: 0 14px 14px; }
+  .mizona-prefs-grid { grid-template-columns: 1fr; }
+}

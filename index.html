@@ -29,16 +29,20 @@
 </head>
 <body>
 
-  <!-- MODAL LOGIN -->
-  <div id="auth-modal" class="auth-modal hidden">
+  <!-- MODAL MI ZONA — solo aparece al pulsar ⭐ sin sesión activa -->
+  <div id="mizona-auth-modal" class="auth-modal hidden">
     <div class="auth-box">
       <div class="auth-logo">
         <span class="brand-terra">TERRA</span><span class="brand-alert">ALERT</span>
       </div>
-      <p style="color:#aaa;text-align:center;margin-bottom:20px;">Inicia sesión para guardar tu historial y preferencias</p>
+      <p style="color:#6b6b90;text-align:center;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;margin-bottom:6px;">MI ZONA SÍSMICA</p>
+      <p style="color:#aaa;text-align:center;margin-bottom:24px;font-size:13px;">Inicia sesión para configurar tu zona de interés y guardar tus preferencias</p>
       <button class="auth-btn" onclick="handleAuth()">
         <img src="https://www.google.com/favicon.ico" width="18" style="vertical-align:middle;margin-right:8px;">
         Continuar con Google
+      </button>
+      <button class="auth-skip" onclick="document.getElementById('mizona-auth-modal').classList.add('hidden')">
+        Cancelar
       </button>
     </div>
   </div>
@@ -110,6 +114,11 @@
               <option value="6">≥ 6.0</option>
             </select>
           </div>
+          <!-- Botón Mi Zona -->
+          <button class="btn-mizona" id="btn-mizona" onclick="openMiZona()" title="Mi Zona Sísmica">
+            <svg id="mizona-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="15" height="15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span id="mizona-label">MI ZONA</span>
+          </button>
           <button class="btn-refresh" onclick="loadData()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/></svg>
             Actualizar
@@ -168,6 +177,135 @@
           </div>
           <div id="map"></div>
         </div>
+      </section>
+
+      <!-- MI ZONA -->
+      <section id="mizona-section" class="mizona-fullview hidden">
+
+        <!-- Header de Mi Zona -->
+        <div class="mizona-header">
+          <div class="mizona-header-left">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="color:var(--amber)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span class="mizona-title">MI ZONA SÍSMICA</span>
+            <span class="mizona-user-tag" id="mizona-user-tag">—</span>
+          </div>
+          <div class="mizona-header-right">
+            <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+          </div>
+        </div>
+
+        <!-- Panel de preferencias -->
+        <div class="mizona-prefs-panel">
+          <div class="mizona-prefs-title">CONFIGURAR MI ZONA</div>
+          <div class="mizona-prefs-grid">
+
+            <div class="pref-field">
+              <label class="pref-label">PAÍS DE INTERÉS</label>
+              <select class="pref-input" id="pref-pais" onchange="onPaisChange()">
+                <option value="">— Seleccionar país —</option>
+                <!-- Más sísmicos primero -->
+                <option value="Japan">Japón</option>
+                <option value="Indonesia">Indonesia</option>
+                <option value="Chile">Chile</option>
+                <option value="Philippines">Filipinas</option>
+                <option value="Mexico">México</option>
+                <option value="Iran">Irán</option>
+                <option value="Turkey">Turquía</option>
+                <option value="Peru">Perú</option>
+                <option value="United States">Estados Unidos</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Ecuador">Ecuador</option>
+                <option value="New Zealand">Nueva Zelanda</option>
+                <option value="Greece">Grecia</option>
+                <option value="Italy">Italia</option>
+                <option value="Nepal">Nepal</option>
+                <option value="Afghanistan">Afganistán</option>
+                <option value="Pakistan">Pakistán</option>
+                <option value="Taiwan">Taiwán</option>
+                <option value="Russia">Rusia</option>
+                <option value="Argentina">Argentina</option>
+                <option value="Bolivia">Bolivia</option>
+                <option value="Venezuela">Venezuela</option>
+                <option value="Costa Rica">Costa Rica</option>
+                <option value="Guatemala">Guatemala</option>
+                <option value="Panama">Panamá</option>
+              </select>
+            </div>
+
+            <div class="pref-field">
+              <label class="pref-label">CIUDAD (OPCIONAL)</label>
+              <input class="pref-input" id="pref-ciudad" type="text" placeholder="Ej: Lima, Bogotá, Tokyo…" />
+            </div>
+
+            <div class="pref-field">
+              <label class="pref-label">MAGNITUD MÍNIMA</label>
+              <select class="pref-input" id="pref-umbral">
+                <option value="2.5">≥ 2.5 (todos)</option>
+                <option value="4.0">≥ 4.0</option>
+                <option value="5.0" selected>≥ 5.0 (significativos)</option>
+                <option value="6.0">≥ 6.0 (fuertes)</option>
+                <option value="7.0">≥ 7.0 (grandes)</option>
+              </select>
+            </div>
+
+          </div>
+          <div class="mizona-prefs-actions">
+            <button class="btn-save-prefs" onclick="savePreferences()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              GUARDAR PREFERENCIAS
+            </button>
+            <span class="pref-saved-msg hidden" id="pref-saved-msg">✓ Guardado</span>
+          </div>
+        </div>
+
+        <!-- Stats de Mi Zona -->
+        <div class="stats-grid mizona-stats" id="mizona-stats-grid" style="display:none;">
+          <div class="stat-card">
+            <div class="stat-label">Sismos en Mi Zona</div>
+            <div class="stat-value" id="mz-total">—</div>
+            <div class="stat-sub" id="mz-total-sub">últimas 24h</div>
+          </div>
+          <div class="stat-card stat-card--warn">
+            <div class="stat-label">Magnitud Máx.</div>
+            <div class="stat-value" id="mz-max">—</div>
+            <div class="stat-sub" id="mz-max-sub">en Mi Zona</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Magnitud Prom.</div>
+            <div class="stat-value" id="mz-avg">—</div>
+            <div class="stat-sub">en Mi Zona</div>
+          </div>
+          <div class="stat-card stat-card--danger">
+            <div class="stat-label">Último Evento</div>
+            <div class="stat-value stat-value--sm" id="mz-last">—</div>
+            <div class="stat-sub" id="mz-last-sub">—</div>
+          </div>
+        </div>
+
+        <!-- Tabla de sismos de Mi Zona -->
+        <div class="content-grid content-grid--full" id="mizona-table-wrap" style="display:none;">
+          <div class="table-panel">
+            <div class="panel-header">
+              <span class="panel-title" id="mizona-table-title">Sismos en Mi Zona</span>
+              <span class="panel-count" id="mizona-quake-count">— eventos</span>
+            </div>
+            <div class="table-scroll">
+              <table class="quake-table">
+                <thead><tr><th>Mag.</th><th>Lugar</th><th>Hora</th><th>Prof.</th></tr></thead>
+                <tbody id="mizona-tbody">
+                  <tr><td colspan="4" class="loading-row">Configura tu zona para ver sismos cercanos</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div class="mizona-empty" id="mizona-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="40" height="40" style="color:var(--muted)"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+          <p>Selecciona un país para ver sismos en tu zona de interés</p>
+        </div>
+
       </section>
 
       <!-- ALERTAS -->

@@ -47,9 +47,9 @@ function enterApp() {
   }, { once: true });
   initDashboard();
 
-  if (sessionReady && !currentUser) {
-    document.getElementById('auth-modal')?.classList.remove('hidden');
-  } else if (sessionReady && currentUser) {
+  // Solo actualizar UI si ya hay sesión (sin bloquear entrada)
+  if (sessionReady && currentUser) {
+    updateMiZonaBtn(true);
     loadUserPreferences();
     showUserMenu();
   }
@@ -440,8 +440,25 @@ async function handleAuth() {
   if (error) console.error(error);
 }
 
-function skipAuth() {
-  document.getElementById('auth-modal').classList.add('hidden');
+/* Abrir Mi Zona: si no hay sesión → modal de login, si hay → vista Mi Zona */
+function openMiZona() {
+  if (!currentUser) {
+    document.getElementById('mizona-auth-modal').classList.remove('hidden');
+  } else {
+    showView('mizona');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  }
+}
+
+function updateMiZonaBtn(loggedIn) {
+  const btn = document.getElementById('btn-mizona');
+  if (!btn) return;
+  if (loggedIn) {
+    btn.classList.add('active');
+    btn.title = 'Mi Zona Sísmica';
+  } else {
+    btn.classList.remove('active');
+  }
 }
 
 async function loadUserPreferences() {
@@ -454,25 +471,37 @@ async function loadUserPreferences() {
 
   if (data) {
     userPreferences = data;
-    document.getElementById('pref-ciudad').value = data.ciudad || '';
-    document.getElementById('pref-umbral').value = data.umbral_magnitud || 5.0;
-    document.getElementById('pref-zona').value = data.zona_interes || '';
+    const paisEl   = document.getElementById('pref-pais');
+    const ciudadEl = document.getElementById('pref-ciudad');
+    const umbralEl = document.getElementById('pref-umbral');
+    if (paisEl)   paisEl.value   = data.pais || '';
+    if (ciudadEl) ciudadEl.value = data.ciudad || '';
+    if (umbralEl) umbralEl.value = data.umbral_magnitud || 5.0;
+    // Si ya tiene zona guardada, cargar datos automáticamente
+    if (data.pais) loadMiZonaData();
   }
 }
 
 async function savePreferences() {
   if (!currentUser) return;
   const prefs = {
-    user_id: currentUser.id,
-    ciudad: document.getElementById('pref-ciudad').value,
+    user_id:         currentUser.id,
+    pais:            document.getElementById('pref-pais').value,
+    ciudad:          document.getElementById('pref-ciudad').value,
     umbral_magnitud: parseFloat(document.getElementById('pref-umbral').value),
-    zona_interes: document.getElementById('pref-zona').value,
-    updated_at: new Date().toISOString()
+    updated_at:      new Date().toISOString()
   };
 
   await sb.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
   userPreferences = prefs;
-  alert('Preferencias guardadas.');
+
+  // Feedback visual
+  const msg = document.getElementById('pref-saved-msg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2500);
+
+  // Cargar datos de la nueva zona
+  if (prefs.pais) loadMiZonaData();
 }
 
 async function saveQuake(quake) {
@@ -515,20 +544,22 @@ async function loadHistory() {
 }
 
 function showUserMenu() {
-  const email = currentUser?.email || '';
+  const email    = currentUser?.email || '';
   const initials = email.substring(0, 2).toUpperCase();
-  const topbar = document.querySelector('.topbar-right');
-  const existing = document.getElementById('user-menu');
-  if (existing) existing.remove();
+  const topbar   = document.querySelector('.topbar-right');
+  document.getElementById('user-menu')?.remove();
 
   const menu = document.createElement('div');
-  menu.id = 'user-menu';
+  menu.id    = 'user-menu';
   menu.className = 'user-menu';
   menu.innerHTML = `
     <div class="user-avatar" title="${email}">${initials}</div>
-    <button class="btn-logout" onclick="logout()">Salir</button>
   `;
   topbar.prepend(menu);
+
+  // Mostrar email en el header de Mi Zona
+  const tag = document.getElementById('mizona-user-tag');
+  if (tag) tag.textContent = email;
 }
 
 async function logout() {
@@ -545,6 +576,7 @@ sb.auth.getSession().then(({ data: { session } }) => {
     currentUser = session.user;
     loadUserPreferences();
     showUserMenu();
+    updateMiZonaBtn(true);
   }
   // Si la app ya está visible (vino de OAuth redirect), inicializar dashboard
   if (!appEl.classList.contains('hidden')) {
