@@ -390,18 +390,22 @@ function renderAlerts() {
 
 /* ─── NAVEGACIÓN ─────────────────────────── */
 function showView(view) {
-  const dashTable    = document.getElementById('dashboard-table');
-  const statsGrid    = document.querySelector('.stats-grid');
-  const mapSection   = document.getElementById('map-section');
-  const alertSection = document.getElementById('alerts-section');
+  const dashTable     = document.getElementById('dashboard-table');
+  const statsGrid     = document.querySelector('.stats-grid');
+  const mapSection    = document.getElementById('map-section');
+  const alertSection  = document.getElementById('alerts-section');
+  const mizonaSection = document.getElementById('mizona-section');
 
   // Ocultar todo
   dashTable?.classList.add('hidden');
   statsGrid?.classList.add('hidden');
   mapSection?.classList.add('hidden');
   alertSection?.classList.add('hidden');
+  mizonaSection?.classList.add('hidden');
 
-  if (view === 'dashboard') {
+  if (view === 'mizona') {
+    mizonaSection?.classList.remove('hidden');
+  } else if (view === 'dashboard') {
     statsGrid?.classList.remove('hidden');
     dashTable?.classList.remove('hidden');
 
@@ -447,8 +451,9 @@ function openMiZona() {
   if (!currentUser) {
     document.getElementById('mizona-auth-modal').classList.remove('hidden');
   } else {
-    showView('mizona');
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.getElementById('page-title').textContent = 'Mi Zona';
+    showView('mizona');
   }
 }
 
@@ -583,6 +588,10 @@ sb.auth.getSession().then(({ data: { session } }) => {
     loadUserPreferences();
     showUserMenu();
     updateMiZonaBtn(true);
+    document.getElementById('mizona-auth-modal')?.classList.add('hidden');
+    if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
+      openMiZona();
+    }
   }
   // Si la app ya está visible (vino de OAuth redirect), inicializar dashboard
   if (!appEl.classList.contains('hidden')) {
@@ -726,4 +735,108 @@ function haversine(lat1, lng1, lat2, lng2) {
   const a  = Math.sin(dL/2)**2 +
              Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dG/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+/* ─── MI ZONA — carga de datos ──────────── */
+function onPaisChange() {
+  const pais = document.getElementById('pref-pais').value;
+  if (pais) loadMiZonaData();
+}
+
+async function loadMiZonaData() {
+  const pais   = document.getElementById('pref-pais').value;
+  const ciudad = document.getElementById('pref-ciudad').value.trim();
+  const umbral = parseFloat(document.getElementById('pref-umbral').value);
+
+  if (!pais) {
+    document.getElementById('mizona-empty').classList.remove('hidden');
+    document.getElementById('mizona-stats-grid').style.display = 'none';
+    document.getElementById('mizona-table-wrap').style.display = 'none';
+    return;
+  }
+
+  const query = ciudad ? `${ciudad}, ${pais}` : pais;
+  let lat, lng;
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'es' } }
+    );
+    const data = await res.json();
+    if (!data.length) throw new Error('No encontrado');
+    lat = parseFloat(data[0].lat);
+    lng = parseFloat(data[0].lon);
+  } catch (e) {
+    console.warn('Geocoding falló para Mi Zona:', e.message);
+    return;
+  }
+
+  const radio = ciudad ? 500 : 1000;
+  const nearby = allQuakes.filter(f => {
+    const [fLng, fLat] = f.geometry.coordinates;
+    return haversine(lat, lng, fLat, fLng) <= radio &&
+           (f.properties.mag || 0) >= umbral;
+  });
+
+  renderMiZonaStats(nearby, radio);
+  renderMiZonaTable(nearby);
+
+  document.getElementById('mizona-empty').classList.add('hidden');
+  document.getElementById('mizona-stats-grid').style.display = 'grid';
+  document.getElementById('mizona-table-wrap').style.display = 'grid';
+}
+
+function renderMiZonaStats(nearby, radio) {
+  if (!nearby.length) {
+    document.getElementById('mz-total').textContent = '0';
+    document.getElementById('mz-total-sub').textContent = `radio ${radio} km`;
+    document.getElementById('mz-max').textContent = '—';
+    document.getElementById('mz-max-sub').textContent = 'sin datos';
+    document.getElementById('mz-avg').textContent = '—';
+    document.getElementById('mz-last').textContent = '—';
+    document.getElementById('mz-last-sub').textContent = '—';
+    return;
+  }
+
+  const mags   = nearby.map(f => f.properties.mag).filter(Boolean);
+  const maxMag = Math.max(...mags);
+  const avgMag = (mags.reduce((a, b) => a + b, 0) / mags.length).toFixed(1);
+  const maxQ   = nearby.find(f => f.properties.mag === maxMag);
+  const lastQ  = [...nearby].sort((a, b) => b.properties.time - a.properties.time)[0];
+
+  document.getElementById('mz-total').textContent = nearby.length;
+  document.getElementById('mz-total-sub').textContent = `radio ${radio} km`;
+  document.getElementById('mz-max').textContent = maxMag.toFixed(1);
+  document.getElementById('mz-max-sub').textContent = maxQ ? shortPlace(maxQ.properties.place) : '';
+  document.getElementById('mz-avg').textContent = avgMag;
+  document.getElementById('mz-last').textContent = shortPlace(lastQ.properties.place);
+  document.getElementById('mz-last-sub').textContent = timeAgo(new Date(lastQ.properties.time));
+}
+
+function renderMiZonaTable(nearby) {
+  const tbody = document.getElementById('mizona-tbody');
+  document.getElementById('mizona-quake-count').textContent = `${nearby.length} eventos`;
+
+  if (!nearby.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading-row">Sin sismos en tu zona</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = nearby.slice(0, 50).map(f => {
+    const mag   = f.properties.mag || 0;
+    const place = f.properties.place || 'Desconocido';
+    const time  = new Date(f.properties.time);
+    const depth = f.geometry.coordinates[2]?.toFixed(0) || '?';
+    const clas  = f.properties.clasificacion || clasificarMag(mag);
+
+    return `
+      <tr>
+        <td><span class="mag-pill ${magClass(mag)}" title="${clas}">${mag.toFixed(1)}</span></td>
+        <td><span class="quake-place" title="${place}">${shortPlace(place)}</span></td>
+        <td><span class="quake-time">${timeAgo(time)}</span></td>
+        <td><span class="quake-depth">${depth} km</span></td>
+      </tr>
+    `;
+  }).join('');
 }
