@@ -420,9 +420,11 @@ function showView(view) {
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', e => {
     e.preventDefault();
+    const view = item.dataset.view;
+    // El botón Mi Zona tiene su propio handler (openMiZona)
+    if (item.id === 'btn-mizona') return;
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
-    const view = item.dataset.view;
     document.getElementById('page-title').textContent =
       { dashboard:'Dashboard', map:'Mapa Global', alerts:'Alertas Sísmicas' }[view] || view;
     showView(view);
@@ -455,9 +457,13 @@ function updateMiZonaBtn(loggedIn) {
   if (!btn) return;
   if (loggedIn) {
     btn.classList.add('active');
-    btn.title = 'Mi Zona Sísmica';
+    // Rellenar estrella cuando hay sesión
+    const svg = btn.querySelector('svg');
+    if (svg) { svg.setAttribute('fill', 'currentColor'); }
   } else {
     btn.classList.remove('active');
+    const svg = btn.querySelector('svg');
+    if (svg) { svg.setAttribute('fill', 'none'); }
   }
 }
 
