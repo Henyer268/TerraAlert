@@ -3,9 +3,10 @@
    Cache offline + Push Notifications
    ═══════════════════════════════════════════ */
 
-const VERSION     = 'v3.0';
+const VERSION     = 'v3.1';
 const CACHE_SHELL = `terraalert-shell-${VERSION}`;
 const CACHE_DATA  = `terraalert-data-${VERSION}`;
+const CACHE_TILES = `terraalert-tiles-${VERSION}`;
 
 /* ── Recursos estáticos a cachear al instalar ── */
 const SHELL_ASSETS = [
@@ -52,7 +53,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k !== CACHE_SHELL && k !== CACHE_DATA)
+          .filter(k => k !== CACHE_SHELL && k !== CACHE_DATA && k !== CACHE_TILES)
           .map(k => {
             console.log(`[SW] Eliminando cache viejo: ${k}`);
             return caches.delete(k);
@@ -145,12 +146,12 @@ async function networkFirstData(request) {
 }
 
 async function tileStrategy(request) {
-  const cache = await caches.open(CACHE_DATA);
+  const cache = await caches.open(CACHE_TILES);
   const cached = await cache.match(request);
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response && response.status === 200) {
+    if (response && response.status === 200 && response.type !== 'opaque') {
       cache.put(request, response.clone());
     }
     return response;
