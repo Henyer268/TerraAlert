@@ -489,16 +489,10 @@ async function loadUserPreferences() {
     if (ciudadEl) ciudadEl.value = data.ciudad || '';
     if (umbralEl) umbralEl.value = data.umbral_magnitud || 5.0;
     // Si ya tiene zona guardada, cargar datos automáticamente
-    if (data.pais) {
-      mizonaLat   = data.lat || null;
-      mizonaLng   = data.lng || null;
+    if (data.lat && data.lng) {
+      mizonaLat   = data.lat;
+      mizonaLng   = data.lng;
       mizonaLabel = data.zona_label || data.pais || '';
-      if (mizonaLat) {
-        document.getElementById('mizona-search-input').value = mizonaLabel;
-        document.getElementById('mizona-zona-label').textContent = mizonaLabel;
-        document.getElementById('mizona-zona-guardada').classList.remove('hidden');
-        loadMiZonaData();
-      }
     }
   }
 }
@@ -749,19 +743,49 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 
 /* ─── MI ZONA — estado ───────────────────── */
-let mizonaLat = null;
-let mizonaLng = null;
+let mizonaLat  = null;
+let mizonaLng  = null;
 let mizonaLabel = '';
+let mzMap      = null;
+let mzMarkers  = [];
 
-async function buscarMiZona() {
-  const input  = document.getElementById('mizona-search-input');
-  const status = document.getElementById('mizona-search-status');
-  const query  = input.value.trim();
-  if (!query) return;
+/* Abrir/cerrar panel de configuración */
+function toggleMzConfig() {
+  const panel = document.getElementById('mz-config-panel');
+  const btn   = document.getElementById('mz-btn-config');
+  const isOpen = !panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', isOpen);
+  btn.classList.toggle('open', !isOpen);
+}
 
-  status.className = 'map-search-status loading';
-  status.textContent = '⟳ Buscando…';
-  status.classList.remove('hidden');
+/* Inicializar el mini-mapa de Mi Zona (solo una vez) */
+function initMzMap() {
+  if (mzMap) return;
+  mzMap = L.map('mz-map', {
+    center: [20, 0], zoom: 4,
+    zoomControl: true, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18
+  }).addTo(mzMap);
+}
+
+/* Guardar preferencias en Supabase y cargar datos */
+async function guardarYCargarMiZona() {
+  if (!currentUser) return;
+
+  const pais   = document.getElementById('pref-pais').value;
+  const ciudad = document.getElementById('pref-ciudad').value.trim();
+  const umbral = parseFloat(document.getElementById('pref-umbral').value);
+
+  if (!pais) {
+    alert('Selecciona al menos un país.');
+    return;
+  }
+
+  // Geocodificar
+  const query = ciudad ? `${ciudad}, ${pais}` : pais;
+  let lat, lng, label;
 
   try {
     const res  = await fetch(
@@ -770,42 +794,50 @@ async function buscarMiZona() {
     );
     const data = await res.json();
     if (!data.length) throw new Error('No encontrado');
-
-    mizonaLat   = parseFloat(data[0].lat);
-    mizonaLng   = parseFloat(data[0].lon);
-    mizonaLabel = data[0].display_name.split(',').slice(0, 2).join(',').trim();
-
-    status.className  = 'map-search-status found';
-    status.textContent = `✓ ${mizonaLabel}`;
-
-    // Mostrar chip de zona guardada
-    const chip = document.getElementById('mizona-zona-guardada');
-    document.getElementById('mizona-zona-label').textContent = mizonaLabel;
-    chip.classList.remove('hidden');
-
-    loadMiZonaData();
-
-  } catch (e) {
-    status.className  = 'map-search-status error';
-    status.textContent = '✕ Ubicación no encontrada. Intenta con otro nombre.';
+    lat   = parseFloat(data[0].lat);
+    lng   = parseFloat(data[0].lon);
+    label = data[0].display_name.split(',').slice(0, 2).join(',').trim();
+  } catch {
+    alert('No se pudo encontrar esa ubicación. Intenta con otro nombre.');
+    return;
   }
+
+  // Guardar en Supabase
+  const prefs = {
+    user_id:         currentUser.id,
+    pais,
+    ciudad:          ciudad || null,
+    umbral_magnitud: umbral,
+    zona_label:      label,
+    lat,
+    lng,
+    updated_at:      new Date().toISOString()
+  };
+  await sb.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
+  userPreferences = prefs;
+
+  // Feedback
+  const msg = document.getElementById('pref-saved-msg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2500);
+
+  // Cerrar panel config
+  document.getElementById('mz-config-panel').classList.add('hidden');
+  document.getElementById('mz-btn-config').classList.remove('open');
+
+  // Aplicar
+  mizonaLat   = lat;
+  mizonaLng   = lng;
+  mizonaLabel = label;
+  loadMiZonaData();
 }
 
-function limpiarMiZona() {
-  mizonaLat = null; mizonaLng = null; mizonaLabel = '';
-  document.getElementById('mizona-search-input').value = '';
-  document.getElementById('mizona-search-status').classList.add('hidden');
-  document.getElementById('mizona-zona-guardada').classList.add('hidden');
-  document.getElementById('mizona-stats-grid').style.display = 'none';
-  document.getElementById('mizona-table-wrap').style.display = 'none';
-  document.getElementById('mizona-empty').classList.remove('hidden');
-}
-
-async function loadMiZonaData() {
+/* Cargar y renderizar datos de Mi Zona */
+function loadMiZonaData() {
   if (!mizonaLat) return;
 
-  const umbral = parseFloat(document.getElementById('pref-umbral').value);
-  const radio  = 500; // km fijo por ahora
+  const umbral = parseFloat(document.getElementById('pref-umbral')?.value || 5.0);
+  const radio  = 500; // km
 
   const nearby = allQuakes.filter(f => {
     const [fLng, fLat] = f.geometry.coordinates;
@@ -813,15 +845,45 @@ async function loadMiZonaData() {
            (f.properties.mag || 0) >= umbral;
   });
 
-  renderMiZonaStats(nearby, radio);
-  renderMiZonaTable(nearby);
+  // Actualizar status bar
+  actualizarStatusBar(nearby);
 
-  document.getElementById('mizona-empty').classList.add('hidden');
-  document.getElementById('mizona-stats-grid').style.display = 'grid';
-  document.getElementById('mizona-table-wrap').style.display = 'grid';
+  // Renderizar todo
+  renderMzStats(nearby, radio);
+  renderMzHighlight(nearby);
+  renderMzTable(nearby);
+  renderMzMap(nearby);
+
+  // Mostrar/ocultar empty
+  document.getElementById('mz-empty').classList.toggle('hidden', true);
 }
 
-function renderMiZonaStats(nearby, radio) {
+/* Barra de estado semáforo */
+function actualizarStatusBar(nearby) {
+  const dot   = document.getElementById('mz-status-dot');
+  const label = document.getElementById('mz-status-label');
+  const loc   = document.getElementById('mz-status-loc');
+
+  const maxMag = nearby.length ? Math.max(...nearby.map(f => f.properties.mag || 0)) : 0;
+
+  dot.className = 'mz-status-dot';
+  if (!nearby.length) {
+    label.textContent = 'SIN ACTIVIDAD SÍSMICA EN TU ZONA';
+  } else if (maxMag >= 6.0) {
+    dot.classList.add('alert');
+    label.textContent = `⚠ ALERTA — Sismo M${maxMag.toFixed(1)} detectado cerca`;
+  } else if (maxMag >= 4.5) {
+    dot.classList.add('moderate');
+    label.textContent = `ACTIVIDAD MODERADA — Máx. M${maxMag.toFixed(1)}`;
+  } else {
+    dot.classList.add('calm');
+    label.textContent = `ACTIVIDAD BAJA — ${nearby.length} sismo${nearby.length !== 1 ? 's' : ''} leve${nearby.length !== 1 ? 's' : ''}`;
+  }
+  loc.textContent = mizonaLabel;
+}
+
+/* Stats cards */
+function renderMzStats(nearby, radio) {
   if (!nearby.length) {
     document.getElementById('mz-total').textContent     = '0';
     document.getElementById('mz-total-sub').textContent = `radio ${radio} km · sin eventos`;
@@ -834,12 +896,12 @@ function renderMiZonaStats(nearby, radio) {
   }
   const mags   = nearby.map(f => f.properties.mag).filter(Boolean);
   const maxMag = Math.max(...mags);
-  const avgMag = (mags.reduce((a,b)=>a+b,0)/mags.length).toFixed(1);
+  const avgMag = (mags.reduce((a,b) => a+b, 0) / mags.length).toFixed(1);
   const maxQ   = nearby.find(f => f.properties.mag === maxMag);
   const lastQ  = [...nearby].sort((a,b) => b.properties.time - a.properties.time)[0];
 
   document.getElementById('mz-total').textContent     = nearby.length;
-  document.getElementById('mz-total-sub').textContent = `radio ${radio} km`;
+  document.getElementById('mz-total-sub').textContent = `radio ${radio} km · últimas 24h`;
   document.getElementById('mz-max').textContent       = maxMag.toFixed(1);
   document.getElementById('mz-max-sub').textContent   = maxQ ? shortPlace(maxQ.properties.place) : '';
   document.getElementById('mz-avg').textContent       = avgMag;
@@ -847,15 +909,45 @@ function renderMiZonaStats(nearby, radio) {
   document.getElementById('mz-last-sub').textContent  = timeAgo(new Date(lastQ.properties.time));
 }
 
-function renderMiZonaTable(nearby) {
-  const tbody = document.getElementById('mizona-tbody');
-  document.getElementById('mizona-quake-count').textContent = `${nearby.length} eventos`;
+/* Card último sismo destacado */
+function renderMzHighlight(nearby) {
+  const card = document.getElementById('mz-highlight');
+  if (!nearby.length) { card.classList.add('hidden'); return; }
+
+  const lastQ = [...nearby].sort((a,b) => b.properties.time - a.properties.time)[0];
+  const mag   = lastQ.properties.mag || 0;
+  const clas  = lastQ.properties.clasificacion || clasificarMag(mag);
+  const depth = lastQ.geometry.coordinates[2]?.toFixed(0) || '?';
+  const url   = lastQ.properties.url || '#';
+
+  document.getElementById('mz-hl-mag').textContent   = `M ${mag.toFixed(1)}`;
+  document.getElementById('mz-hl-place').textContent = lastQ.properties.place || 'Desconocido';
+  document.getElementById('mz-hl-time').textContent  = timeAgo(new Date(lastQ.properties.time));
+  document.getElementById('mz-hl-depth').textContent = `↓ ${depth} km`;
+  document.getElementById('mz-hl-clas').textContent  = clas.toUpperCase();
+
+  const link = document.getElementById('mz-hl-link');
+  link.href = url;
+  link.style.display = url === '#' ? 'none' : '';
+
+  // Color del mag según severidad
+  const magEl = document.getElementById('mz-hl-mag');
+  magEl.style.color = magColor(mag);
+
+  card.classList.remove('hidden');
+}
+
+/* Tabla */
+function renderMzTable(nearby) {
+  const tbody = document.getElementById('mz-tbody');
+  document.getElementById('mz-quake-count').textContent = `${nearby.length} eventos`;
 
   if (!nearby.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="loading-row">Sin sismos en tu zona con este filtro</td></tr>';
     return;
   }
-  tbody.innerHTML = nearby
+
+  tbody.innerHTML = [...nearby]
     .sort((a,b) => b.properties.time - a.properties.time)
     .slice(0, 60).map(f => {
       const mag   = f.properties.mag || 0;
@@ -872,3 +964,72 @@ function renderMiZonaTable(nearby) {
         </tr>`;
     }).join('');
 }
+
+/* Mini-mapa */
+function renderMzMap(nearby) {
+  if (!mzMap) return;
+
+  // Limpiar marcadores anteriores
+  mzMarkers.forEach(m => mzMap.removeLayer(m));
+  mzMarkers = [];
+
+  // Centrar en zona del usuario
+  mzMap.setView([mizonaLat, mizonaLng], 5);
+
+  // Marcador de referencia (zona del usuario)
+  const iconUser = L.divIcon({
+    className: '',
+    html: `<div style="width:12px;height:12px;border-radius:50%;
+      background:var(--amber);border:2px solid #fff;
+      box-shadow:0 0 10px rgba(245,158,11,0.8);"></div>`,
+    iconSize: [12, 12], iconAnchor: [6, 6]
+  });
+  const userMarker = L.marker([mizonaLat, mizonaLng], { icon: iconUser })
+    .addTo(mzMap)
+    .bindPopup(`<div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#e2e2f0;background:#0d0d18;padding:4px;">
+      <b style="color:var(--amber)">📍 MI ZONA</b><br>${mizonaLabel}
+    </div>`, { className: 'terra-popup' });
+  mzMarkers.push(userMarker);
+
+  // Sismos cercanos
+  nearby.forEach(feature => {
+    const mag    = feature.properties.mag || 0;
+    const place  = feature.properties.place || 'Desconocido';
+    const time   = new Date(feature.properties.time);
+    const [lng, lat] = feature.geometry.coordinates;
+    const color  = magColor(mag);
+    const radius = Math.max(4, mag * 2.5);
+
+    const circle = L.circleMarker([lat, lng], {
+      radius, fillColor: color, color, weight: 1,
+      opacity: 0.8, fillOpacity: 0.5
+    }).bindPopup(`
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:#e2e2f0;background:#0d0d18;padding:4px;">
+        <b style="font-size:15px;color:${color}">M ${mag.toFixed(1)}</b><br>
+        ${place}<br>
+        <span style="color:#6b6b90">${timeAgo(time)}</span>
+      </div>
+    `, { className: 'terra-popup' });
+
+    circle.addTo(mzMap);
+    mzMarkers.push(circle);
+  });
+
+  // Forzar redibujado
+  setTimeout(() => mzMap.invalidateSize(), 100);
+}
+
+/* showView — agregar caso mizona */
+const _origShowView = showView;
+showView = function(view) {
+  _origShowView(view);
+  if (view === 'mizona') {
+    initMzMap();
+    // Actualizar tag de usuario
+    const tag = document.getElementById('mz-user-tag');
+    if (tag && currentUser) tag.textContent = currentUser.email;
+    // Si ya tiene zona cargada, renderizar
+    if (mizonaLat) loadMiZonaData();
+    else document.getElementById('mz-empty').classList.remove('hidden');
+  }
+};
