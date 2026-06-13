@@ -9,6 +9,10 @@ if (sessionStorage.getItem('introVisto') ||
     window.location.search.includes('code=')) {
   document.getElementById('intro-overlay').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
+  // Limpiar parámetros OAuth de la URL sin recargar
+  if (window.location.search.includes('code=') || window.location.hash.includes('access_token')) {
+    window.history.replaceState({}, document.title, '/');
+  }
 }
 
 /* ─── CONFIG ──────────────────────────────── */

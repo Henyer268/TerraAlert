@@ -86,8 +86,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* 3. Supabase: siempre red (autenticación y BD no se pueden cachear) */
-  if (url.hostname.includes('supabase.co')) {
+  /* 3. Supabase y OAuth redirects: siempre red */
+  if (url.hostname.includes('supabase.co') ||
+      url.search.includes('code=') ||
+      url.hash.includes('access_token')) {
     return; /* dejar pasar sin interceptar */
   }
 
