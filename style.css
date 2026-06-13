@@ -852,3 +852,56 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 @media (max-width: 600px) {
   .mz-stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Tamaño compacto para tarjetas de zona ── */
+.mz-zona-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px; margin-bottom: 12px;
+}
+.mz-zona-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.mz-zona-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1px;
+  color: var(--text);
+}
+.mz-zona-delete {
+  background: transparent; border: 1px solid var(--border2); color: var(--muted2);
+  border-radius: 4px; padding: 3px 8px; font-size: 9px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+  transition: color .2s, border-color .2s;
+}
+.mz-zona-delete:hover { color: var(--red); border-color: var(--red); }
+
+.mz-zona-status {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  padding: 6px 10px; border-radius: 5px; margin-bottom: 8px;
+  background: var(--bg3); color: var(--text);
+}
+
+.mz-zona-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  margin-bottom: 8px;
+}
+.mz-zona-stats .stat-card {
+  padding: 8px 10px;
+}
+.mz-zona-stats .stat-label { font-size: 8px; margin-bottom: 4px; }
+.mz-zona-stats .stat-value { font-size: 20px; }
+.mz-zona-stats .stat-value--sm { font-size: 12px; }
+.mz-zona-stats .stat-sub { font-size: 8px; }
+
+.mz-zona-body {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.mz-zona-table-wrap { max-height: 220px; }
+.mz-zona-table-wrap .table-scroll { max-height: 180px; overflow-y: auto; }
+.mz-zona-map { height: 220px; border-radius: 6px; overflow: hidden; }
+
+@media (max-width: 700px) {
+  .mz-zona-stats { grid-template-columns: repeat(2, 1fr); }
+  .mz-zona-body { grid-template-columns: 1fr; }
+}
