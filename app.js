@@ -120,7 +120,7 @@ async function loadData() {
 
 function applyFilters() { loadData(); }
 async function checkSevereQuakes() {
-  const severe = allQuakes.filter(f => (f.properties.mag || 0) >= 6.0);
+  const severe = allQuakes.filter(f => (f.properties.mag || 0) >= 1.0);
   if (!severe.length) return;
 
   const top = severe[0];
