@@ -4,15 +4,13 @@
    ═══════════════════════════════════════════ */
 
 /* ─── SKIP INTRO SI YA FUE VISTO O VIENE DE OAUTH ── */
-if (sessionStorage.getItem('introVisto') ||
-    window.location.hash.includes('access_token') ||
-    window.location.search.includes('code=')) {
+const _vieneDeOAuth = window.location.hash.includes('access_token') ||
+                      window.location.search.includes('code=');
+
+if (sessionStorage.getItem('introVisto') || _vieneDeOAuth) {
   document.getElementById('intro-overlay').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
-  // Limpiar parámetros OAuth de la URL sin recargar
-  if (window.location.search.includes('code=') || window.location.hash.includes('access_token')) {
-    window.history.replaceState({}, document.title, '/');
-  }
+  // NO limpiar la URL aquí — Supabase necesita leer el hash/code primero
 }
 
 /* ─── CONFIG ──────────────────────────────── */
@@ -601,6 +599,10 @@ sb.auth.getSession().then(({ data: { session } }) => {
     if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
       openMiZona();
     }
+  }
+  // Limpiar la URL AHORA, después de que Supabase procesó la sesión
+  if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
+    window.history.replaceState({}, document.title, '/');
   }
   // Si la app ya está visible (vino de OAuth redirect), inicializar dashboard
   if (!appEl.classList.contains('hidden')) {
