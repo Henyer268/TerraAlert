@@ -120,21 +120,61 @@ async function loadData() {
 
 function applyFilters() { loadData(); }
 async function checkSevereQuakes() {
-  const severe = allQuakes.filter(f => (f.properties.mag || 0) >= 1.0);
-  if (!severe.length) return;
+  const notificados = JSON.parse(localStorage.getItem('quakesNotificados') || '[]');
+  const nuevosNotificados = [...notificados];
 
-  const top = severe[0];
-  await fetch(`${BACKEND_URL}/push/notify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: `🌍 Sismo M ${top.properties.mag.toFixed(1)}`,
-      body:  top.properties.place || 'Ver detalles en terraALERT',
-      mag:   top.properties.mag,
-      id:    top.id,
-      url:   top.properties.url || '/'
-    })
-  });
+  // Alertas globales (≥6.0)
+  const severe = allQuakes.filter(f => (f.properties.mag || 0) >= 6.0 && !notificados.includes(f.id));
+  if (severe.length) {
+    const top = severe[0];
+    await fetch(`${BACKEND_URL}/push/notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `🌍 Sismo M ${top.properties.mag.toFixed(1)}`,
+        body:  top.properties.place || 'Ver detalles en terraALERT',
+        mag:   top.properties.mag,
+        id:    top.id,
+        url:   top.properties.url || '/'
+      })
+    });
+    nuevosNotificados.push(top.id);
+  }
+
+  // Alertas por zona (Mi Zona)
+  if (typeof zonasGuardadas !== 'undefined') {
+    for (const zona of zonasGuardadas) {
+      const umbral = zona.umbral_magnitud || 5.0;
+      const nearby = allQuakes.filter(f => {
+        const [fLng, fLat] = f.geometry.coordinates;
+        const key = `zona-${zona.id}-${f.id}`;
+        return haversine(zona.lat, zona.lng, fLat, fLng) <= 1000 &&
+               (f.properties.mag || 0) >= umbral &&
+               !notificados.includes(key);
+      });
+      if (!nearby.length) continue;
+
+      const topZ = nearby.sort((a,b) => b.properties.mag - a.properties.mag)[0];
+      const titulo = zona.ciudad ? `${zona.ciudad}, ${zona.pais}` : zona.pais;
+      const keyZ = `zona-${zona.id}-${topZ.id}`;
+
+      await fetch(`${BACKEND_URL}/push/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `📍 ${titulo}: Sismo M ${topZ.properties.mag.toFixed(1)}`,
+          body:  topZ.properties.place || 'Ver detalles en terraALERT',
+          mag:   topZ.properties.mag,
+          id:    keyZ,
+          url:   '/?view=mizona'
+        })
+      });
+      nuevosNotificados.push(keyZ);
+    }
+  }
+
+  // Guardar lista actualizada (limitar a 200 entradas para no crecer infinito)
+  localStorage.setItem('quakesNotificados', JSON.stringify(nuevosNotificados.slice(-200)));
 }
 
 /* ─── RENDER ─────────────────────────────── */
