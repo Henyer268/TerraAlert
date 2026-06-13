@@ -478,45 +478,6 @@ function updateMiZonaBtn(loggedIn) {
   }
 }
 
-async function saveQuake(quake) {
-  if (!currentUser) return;
-  await sb.from('quake_history').insert({
-    user_id: currentUser.id,
-    quake_id: quake.id,
-    magnitud: quake.properties.mag,
-    clasificacion: quake.properties.clasificacion,
-    lugar: quake.properties.place,
-    hora: new Date(quake.properties.time).toISOString(),
-    latitud: quake.geometry.coordinates[1],
-    longitud: quake.geometry.coordinates[0],
-    profundidad_km: quake.geometry.coordinates[2]
-  });
-}
-
-async function loadHistory() {
-  if (!currentUser) return;
-  const { data } = await sb
-    .from('quake_history')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false })
-    .limit(50);
-
-  const tbody = document.getElementById('history-tbody');
-  if (!data || !data.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading-row">Sin sismos guardados</td></tr>';
-    return;
-  }
-  tbody.innerHTML = data.map(q => `
-    <tr>
-      <td><span class="mag-pill ${magClass(q.magnitud)}">${q.magnitud?.toFixed(1)}</span></td>
-      <td><span class="quake-place">${shortPlace(q.lugar)}</span></td>
-      <td><span class="quake-time">${timeAgo(new Date(q.hora))}</span></td>
-      <td><span class="quake-depth">${q.profundidad_km?.toFixed(0)} km</span></td>
-    </tr>
-  `).join('');
-}
-
 function showUserMenu() {
   const email    = currentUser?.email || '';
   const initials = email.substring(0, 2).toUpperCase();
