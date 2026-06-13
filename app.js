@@ -142,6 +142,7 @@ function renderAll() {
   renderStats();
   renderMap();
   renderTable();
+  if (typeof actualizarTodasLasZonas === 'function') actualizarTodasLasZonas();
 }
 
 /* ─── ESTADÍSTICAS ───────────────────────── */
@@ -474,54 +475,6 @@ function updateMiZonaBtn(loggedIn) {
   }
 }
 
-async function loadUserPreferences() {
-  if (!currentUser) return;
-  const { data } = await sb
-    .from('user_preferences')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .single();
-
-  if (data) {
-    userPreferences = data;
-    const paisEl   = document.getElementById('pref-pais');
-    const ciudadEl = document.getElementById('pref-ciudad');
-    const umbralEl = document.getElementById('pref-umbral');
-    if (paisEl)   paisEl.value   = data.pais || '';
-    if (ciudadEl) ciudadEl.value = data.ciudad || '';
-    if (umbralEl) umbralEl.value = data.umbral_magnitud || 5.0;
-    // Si ya tiene zona guardada, cargar datos automáticamente
-    if (data.lat && data.lng) {
-      mizonaLat   = data.lat;
-      mizonaLng   = data.lng;
-      mizonaLabel = data.zona_label || data.pais || '';
-    }
-  }
-}
-
-async function savePreferences() {
-  if (!currentUser) return;
-  const prefs = {
-    user_id:         currentUser.id,
-    zona_label:      mizonaLabel,
-    lat:             mizonaLat,
-    lng:             mizonaLng,
-    umbral_magnitud: parseFloat(document.getElementById('pref-umbral').value),
-    updated_at:      new Date().toISOString()
-  };
-
-  await sb.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
-  userPreferences = prefs;
-
-  // Feedback visual
-  const msg = document.getElementById('pref-saved-msg');
-  msg.classList.remove('hidden');
-  setTimeout(() => msg.classList.add('hidden'), 2500);
-
-  // Cargar datos de la nueva zona
-  if (prefs.pais) loadMiZonaData();
-}
-
 async function saveQuake(quake) {
   if (!currentUser) return;
   await sb.from('quake_history').insert({
@@ -748,12 +701,8 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-/* ─── MI ZONA — estado ───────────────────── */
-let mizonaLat  = null;
-let mizonaLng  = null;
-let mizonaLabel = '';
-let mzMap      = null;
-let mzMarkers  = [];
+/* ─── MI ZONA — multi-zonas ──────────────── */
+let zonasGuardadas = []; // [{id, pais, ciudad, umbral_magnitud, zona_label, lat, lng, map, markers}]
 
 /* Abrir/cerrar panel de configuración */
 function toggleMzConfig() {
@@ -764,20 +713,27 @@ function toggleMzConfig() {
   btn.classList.toggle('open', !isOpen);
 }
 
-/* Inicializar el mini-mapa de Mi Zona (solo una vez) */
-function initMzMap() {
-  if (mzMap) return;
-  mzMap = L.map('mz-map', {
-    center: [20, 0], zoom: 4,
-    zoomControl: true, attributionControl: false
-  });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 18
-  }).addTo(mzMap);
+/* Cargar todas las zonas guardadas del usuario */
+async function loadUserPreferences() {
+  if (!currentUser) return;
+
+  const { data, error } = await sb
+    .from('user_preferences')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error cargando zonas:', error);
+    return;
+  }
+
+  zonasGuardadas = (data || []).map(z => ({ ...z, map: null, markers: [] }));
+  renderZonasContainer();
 }
 
-/* Guardar preferencias en Supabase y cargar datos */
-async function guardarYCargarMiZona() {
+/* Agregar nueva zona (INSERT, no upsert) */
+async function agregarZona() {
   if (!currentUser) return;
 
   const pais   = document.getElementById('pref-pais').value;
@@ -789,7 +745,6 @@ async function guardarYCargarMiZona() {
     return;
   }
 
-  // Geocodificar
   const query = ciudad ? `${ciudad}, ${pais}` : pais;
   let lat, lng, label;
 
@@ -808,8 +763,7 @@ async function guardarYCargarMiZona() {
     return;
   }
 
-  // Guardar en Supabase
-  const prefs = {
+  const nuevaZona = {
     user_id:         currentUser.id,
     pais,
     ciudad:          ciudad || null,
@@ -819,170 +773,144 @@ async function guardarYCargarMiZona() {
     lng,
     updated_at:      new Date().toISOString()
   };
-  await sb.from('user_preferences').upsert(prefs, { onConflict: 'user_id' });
-  userPreferences = prefs;
 
-  // Feedback
+  const { data: inserted, error } = await sb
+    .from('user_preferences')
+    .insert(nuevaZona)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error guardando zona:', error);
+    alert('Error al guardar la zona. Revisa la consola.');
+    return;
+  }
+
+  zonasGuardadas.push({ ...inserted, map: null, markers: [] });
+
   const msg = document.getElementById('pref-saved-msg');
   msg.classList.remove('hidden');
   setTimeout(() => msg.classList.add('hidden'), 2500);
 
-  // Cerrar panel config
+  document.getElementById('pref-pais').value = '';
+  document.getElementById('pref-ciudad').value = '';
+
   document.getElementById('mz-config-panel').classList.add('hidden');
   document.getElementById('mz-btn-config').classList.remove('open');
 
-  // Aplicar
-  mizonaLat   = lat;
-  mizonaLng   = lng;
-  mizonaLabel = label;
-  loadMiZonaData();
+  renderZonasContainer();
 }
 
-/* Cargar y renderizar datos de Mi Zona */
-function loadMiZonaData() {
-  if (!mizonaLat) return;
+/* Borrar una zona */
+async function borrarZona(zonaId) {
+  if (!confirm('¿Borrar esta zona guardada?')) return;
 
-  const umbral = parseFloat(document.getElementById('pref-umbral')?.value || 5.0);
-  const radio  = 500; // km
+  const { error } = await sb
+    .from('user_preferences')
+    .delete()
+    .eq('id', zonaId);
 
-  const nearby = allQuakes.filter(f => {
-    const [fLng, fLat] = f.geometry.coordinates;
-    return haversine(mizonaLat, mizonaLng, fLat, fLng) <= radio &&
-           (f.properties.mag || 0) >= umbral;
+  if (error) {
+    console.error('Error borrando zona:', error);
+    alert('Error al borrar la zona.');
+    return;
+  }
+
+  zonasGuardadas = zonasGuardadas.filter(z => z.id !== zonaId);
+  renderZonasContainer();
+}
+
+/* Renderizar el contenedor de tarjetas */
+function renderZonasContainer() {
+  const container = document.getElementById('mz-zonas-container');
+  const empty     = document.getElementById('mz-empty');
+
+  if (!zonasGuardadas.length) {
+    container.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+
+  container.innerHTML = zonasGuardadas.map(zona => {
+    const titulo = zona.ciudad ? `${zona.ciudad}, ${zona.pais}` : zona.pais;
+    return `
+      <div class="mz-zona-card" data-zona-id="${zona.id}">
+        <div class="mz-zona-header">
+          <div class="mz-zona-title">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            ${titulo}
+          </div>
+          <button class="mz-zona-delete" onclick="borrarZona('${zona.id}')">✕ BORRAR</button>
+        </div>
+
+        <div class="mz-zona-status" id="mz-status-${zona.id}">
+          <span class="mz-status-dot" id="mz-status-dot-${zona.id}"></span>
+          <span id="mz-status-label-${zona.id}">Cargando...</span>
+        </div>
+
+        <div class="mz-zona-stats" id="mz-stats-${zona.id}">
+          <div class="stat-card">
+            <div class="stat-label">Sismos</div>
+            <div class="stat-value" id="mz-total-${zona.id}">—</div>
+            <div class="stat-sub">radio 500 km</div>
+          </div>
+          <div class="stat-card stat-card--warn">
+            <div class="stat-label">Mag. Máx.</div>
+            <div class="stat-value" id="mz-max-${zona.id}">—</div>
+            <div class="stat-sub" id="mz-max-sub-${zona.id}">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Mag. Prom.</div>
+            <div class="stat-value" id="mz-avg-${zona.id}">—</div>
+            <div class="stat-sub">≥ ${zona.umbral_magnitud}</div>
+          </div>
+          <div class="stat-card stat-card--danger">
+            <div class="stat-label">Último</div>
+            <div class="stat-value stat-value--sm" id="mz-last-${zona.id}">—</div>
+            <div class="stat-sub" id="mz-last-sub-${zona.id}">—</div>
+          </div>
+        </div>
+
+        <div class="mz-zona-body">
+          <div class="mz-zona-table-wrap table-panel">
+            <div class="panel-header">
+              <span class="panel-title">SISMOS CERCANOS</span>
+              <span class="panel-count" id="mz-count-${zona.id}">—</span>
+            </div>
+            <table class="quake-table">
+              <thead><tr><th>Mag.</th><th>Lugar</th><th>Hora</th><th>Prof.</th></tr></thead>
+              <tbody id="mz-tbody-${zona.id}">
+                <tr><td colspan="4" class="loading-row">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mz-zona-map" id="mz-map-${zona.id}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  zonasGuardadas.forEach(zona => {
+    initZonaMap(zona);
+    actualizarZonaData(zona);
   });
-
-  // Actualizar status bar
-  actualizarStatusBar(nearby);
-
-  // Renderizar todo
-  renderMzStats(nearby, radio);
-  renderMzHighlight(nearby);
-  renderMzTable(nearby);
-  renderMzMap(nearby);
-
-  // Mostrar/ocultar empty
-  document.getElementById('mz-empty').classList.toggle('hidden', true);
 }
 
-/* Barra de estado semáforo */
-function actualizarStatusBar(nearby) {
-  const dot   = document.getElementById('mz-status-dot');
-  const label = document.getElementById('mz-status-label');
-  const loc   = document.getElementById('mz-status-loc');
+/* Inicializar mini-mapa de una zona */
+function initZonaMap(zona) {
+  const el = document.getElementById(`mz-map-${zona.id}`);
+  if (!el) return;
 
-  const maxMag = nearby.length ? Math.max(...nearby.map(f => f.properties.mag || 0)) : 0;
+  zona.map = L.map(el, {
+    center: [zona.lat, zona.lng], zoom: 5,
+    zoomControl: true, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18
+  }).addTo(zona.map);
 
-  dot.className = 'mz-status-dot';
-  if (!nearby.length) {
-    label.textContent = 'SIN ACTIVIDAD SÍSMICA EN TU ZONA';
-  } else if (maxMag >= 6.0) {
-    dot.classList.add('alert');
-    label.textContent = `⚠ ALERTA — Sismo M${maxMag.toFixed(1)} detectado cerca`;
-  } else if (maxMag >= 4.5) {
-    dot.classList.add('moderate');
-    label.textContent = `ACTIVIDAD MODERADA — Máx. M${maxMag.toFixed(1)}`;
-  } else {
-    dot.classList.add('calm');
-    label.textContent = `ACTIVIDAD BAJA — ${nearby.length} sismo${nearby.length !== 1 ? 's' : ''} leve${nearby.length !== 1 ? 's' : ''}`;
-  }
-  loc.textContent = mizonaLabel;
-}
-
-/* Stats cards */
-function renderMzStats(nearby, radio) {
-  if (!nearby.length) {
-    document.getElementById('mz-total').textContent     = '0';
-    document.getElementById('mz-total-sub').textContent = `radio ${radio} km · sin eventos`;
-    document.getElementById('mz-max').textContent       = '—';
-    document.getElementById('mz-max-sub').textContent   = 'sin datos';
-    document.getElementById('mz-avg').textContent       = '—';
-    document.getElementById('mz-last').textContent      = '—';
-    document.getElementById('mz-last-sub').textContent  = '—';
-    return;
-  }
-  const mags   = nearby.map(f => f.properties.mag).filter(Boolean);
-  const maxMag = Math.max(...mags);
-  const avgMag = (mags.reduce((a,b) => a+b, 0) / mags.length).toFixed(1);
-  const maxQ   = nearby.find(f => f.properties.mag === maxMag);
-  const lastQ  = [...nearby].sort((a,b) => b.properties.time - a.properties.time)[0];
-
-  document.getElementById('mz-total').textContent     = nearby.length;
-  document.getElementById('mz-total-sub').textContent = `radio ${radio} km · últimas 24h`;
-  document.getElementById('mz-max').textContent       = maxMag.toFixed(1);
-  document.getElementById('mz-max-sub').textContent   = maxQ ? shortPlace(maxQ.properties.place) : '';
-  document.getElementById('mz-avg').textContent       = avgMag;
-  document.getElementById('mz-last').textContent      = shortPlace(lastQ.properties.place);
-  document.getElementById('mz-last-sub').textContent  = timeAgo(new Date(lastQ.properties.time));
-}
-
-/* Card último sismo destacado */
-function renderMzHighlight(nearby) {
-  const card = document.getElementById('mz-highlight');
-  if (!nearby.length) { card.classList.add('hidden'); return; }
-
-  const lastQ = [...nearby].sort((a,b) => b.properties.time - a.properties.time)[0];
-  const mag   = lastQ.properties.mag || 0;
-  const clas  = lastQ.properties.clasificacion || clasificarMag(mag);
-  const depth = lastQ.geometry.coordinates[2]?.toFixed(0) || '?';
-  const url   = lastQ.properties.url || '#';
-
-  document.getElementById('mz-hl-mag').textContent   = `M ${mag.toFixed(1)}`;
-  document.getElementById('mz-hl-place').textContent = lastQ.properties.place || 'Desconocido';
-  document.getElementById('mz-hl-time').textContent  = timeAgo(new Date(lastQ.properties.time));
-  document.getElementById('mz-hl-depth').textContent = `↓ ${depth} km`;
-  document.getElementById('mz-hl-clas').textContent  = clas.toUpperCase();
-
-  const link = document.getElementById('mz-hl-link');
-  link.href = url;
-  link.style.display = url === '#' ? 'none' : '';
-
-  // Color del mag según severidad
-  const magEl = document.getElementById('mz-hl-mag');
-  magEl.style.color = magColor(mag);
-
-  card.classList.remove('hidden');
-}
-
-/* Tabla */
-function renderMzTable(nearby) {
-  const tbody = document.getElementById('mz-tbody');
-  document.getElementById('mz-quake-count').textContent = `${nearby.length} eventos`;
-
-  if (!nearby.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading-row">Sin sismos en tu zona con este filtro</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = [...nearby]
-    .sort((a,b) => b.properties.time - a.properties.time)
-    .slice(0, 60).map(f => {
-      const mag   = f.properties.mag || 0;
-      const place = f.properties.place || 'Desconocido';
-      const time  = new Date(f.properties.time);
-      const depth = f.geometry.coordinates[2]?.toFixed(0) || '?';
-      const clas  = f.properties.clasificacion || clasificarMag(mag);
-      return `
-        <tr>
-          <td><span class="mag-pill ${magClass(mag)}" title="${clas}">${mag.toFixed(1)}</span></td>
-          <td><span class="quake-place" title="${place}">${shortPlace(place)}</span></td>
-          <td><span class="quake-time">${timeAgo(time)}</span></td>
-          <td><span class="quake-depth">${depth} km</span></td>
-        </tr>`;
-    }).join('');
-}
-
-/* Mini-mapa */
-function renderMzMap(nearby) {
-  if (!mzMap) return;
-
-  // Limpiar marcadores anteriores
-  mzMarkers.forEach(m => mzMap.removeLayer(m));
-  mzMarkers = [];
-
-  // Centrar en zona del usuario
-  mzMap.setView([mizonaLat, mizonaLng], 5);
-
-  // Marcador de referencia (zona del usuario)
   const iconUser = L.divIcon({
     className: '',
     html: `<div style="width:12px;height:12px;border-radius:50%;
@@ -990,52 +918,138 @@ function renderMzMap(nearby) {
       box-shadow:0 0 10px rgba(245,158,11,0.8);"></div>`,
     iconSize: [12, 12], iconAnchor: [6, 6]
   });
-  const userMarker = L.marker([mizonaLat, mizonaLng], { icon: iconUser })
-    .addTo(mzMap)
+  L.marker([zona.lat, zona.lng], { icon: iconUser })
+    .addTo(zona.map)
     .bindPopup(`<div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#e2e2f0;background:#0d0d18;padding:4px;">
-      <b style="color:var(--amber)">📍 MI ZONA</b><br>${mizonaLabel}
+      <b style="color:var(--amber)">📍 ${zona.zona_label || zona.pais}</b>
     </div>`, { className: 'terra-popup' });
-  mzMarkers.push(userMarker);
 
-  // Sismos cercanos
-  nearby.forEach(feature => {
-    const mag    = feature.properties.mag || 0;
-    const place  = feature.properties.place || 'Desconocido';
-    const time   = new Date(feature.properties.time);
-    const [lng, lat] = feature.geometry.coordinates;
-    const color  = magColor(mag);
-    const radius = Math.max(4, mag * 2.5);
-
-    const circle = L.circleMarker([lat, lng], {
-      radius, fillColor: color, color, weight: 1,
-      opacity: 0.8, fillOpacity: 0.5
-    }).bindPopup(`
-      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:#e2e2f0;background:#0d0d18;padding:4px;">
-        <b style="font-size:15px;color:${color}">M ${mag.toFixed(1)}</b><br>
-        ${place}<br>
-        <span style="color:#6b6b90">${timeAgo(time)}</span>
-      </div>
-    `, { className: 'terra-popup' });
-
-    circle.addTo(mzMap);
-    mzMarkers.push(circle);
-  });
-
-  // Forzar redibujado
-  setTimeout(() => mzMap.invalidateSize(), 100);
+  setTimeout(() => zona.map.invalidateSize(), 100);
 }
 
-/* showView — agregar caso mizona */
+/* Calcular y renderizar datos de una zona específica */
+function actualizarZonaData(zona) {
+  const radio  = 500;
+  const umbral = zona.umbral_magnitud || 5.0;
+
+  const nearby = allQuakes.filter(f => {
+    const [fLng, fLat] = f.geometry.coordinates;
+    return haversine(zona.lat, zona.lng, fLat, fLng) <= radio &&
+           (f.properties.mag || 0) >= umbral;
+  });
+
+  const dot   = document.getElementById(`mz-status-dot-${zona.id}`);
+  const label = document.getElementById(`mz-status-label-${zona.id}`);
+  if (!dot || !label) return;
+
+  const maxMagAll = nearby.length ? Math.max(...nearby.map(f => f.properties.mag || 0)) : 0;
+
+  dot.className = 'mz-status-dot';
+  if (!nearby.length) {
+    label.textContent = 'SIN ACTIVIDAD SÍSMICA EN ESTA ZONA';
+  } else if (maxMagAll >= 6.0) {
+    dot.classList.add('alert');
+    label.textContent = `⚠ ALERTA — Sismo M${maxMagAll.toFixed(1)} detectado cerca`;
+  } else if (maxMagAll >= 4.5) {
+    dot.classList.add('moderate');
+    label.textContent = `ACTIVIDAD MODERADA — Máx. M${maxMagAll.toFixed(1)}`;
+  } else {
+    dot.classList.add('calm');
+    label.textContent = `ACTIVIDAD BAJA — ${nearby.length} sismo${nearby.length !== 1 ? 's' : ''}`;
+  }
+
+  if (!nearby.length) {
+    document.getElementById(`mz-total-${zona.id}`).textContent = '0';
+    document.getElementById(`mz-max-${zona.id}`).textContent = '—';
+    document.getElementById(`mz-max-sub-${zona.id}`).textContent = 'sin datos';
+    document.getElementById(`mz-avg-${zona.id}`).textContent = '—';
+    document.getElementById(`mz-last-${zona.id}`).textContent = '—';
+    document.getElementById(`mz-last-sub-${zona.id}`).textContent = '—';
+  } else {
+    const mags   = nearby.map(f => f.properties.mag).filter(Boolean);
+    const maxMag = Math.max(...mags);
+    const avgMag = (mags.reduce((a,b) => a+b, 0) / mags.length).toFixed(1);
+    const maxQ   = nearby.find(f => f.properties.mag === maxMag);
+    const lastQ  = [...nearby].sort((a,b) => b.properties.time - a.properties.time)[0];
+
+    document.getElementById(`mz-total-${zona.id}`).textContent = nearby.length;
+    document.getElementById(`mz-max-${zona.id}`).textContent = maxMag.toFixed(1);
+    document.getElementById(`mz-max-sub-${zona.id}`).textContent = maxQ ? shortPlace(maxQ.properties.place) : '';
+    document.getElementById(`mz-avg-${zona.id}`).textContent = avgMag;
+    document.getElementById(`mz-last-${zona.id}`).textContent = shortPlace(lastQ.properties.place);
+    document.getElementById(`mz-last-sub-${zona.id}`).textContent = timeAgo(new Date(lastQ.properties.time));
+  }
+
+  const tbody = document.getElementById(`mz-tbody-${zona.id}`);
+  document.getElementById(`mz-count-${zona.id}`).textContent = `${nearby.length} eventos`;
+
+  if (!nearby.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading-row">Sin sismos en esta zona con el filtro actual</td></tr>';
+  } else {
+    tbody.innerHTML = [...nearby]
+      .sort((a,b) => b.properties.time - a.properties.time)
+      .slice(0, 30).map(f => {
+        const mag   = f.properties.mag || 0;
+        const place = f.properties.place || 'Desconocido';
+        const time  = new Date(f.properties.time);
+        const depth = f.geometry.coordinates[2]?.toFixed(0) || '?';
+        const clas  = f.properties.clasificacion || clasificarMag(mag);
+        return `
+          <tr>
+            <td><span class="mag-pill ${magClass(mag)}" title="${clas}">${mag.toFixed(1)}</span></td>
+            <td><span class="quake-place" title="${place}">${shortPlace(place)}</span></td>
+            <td><span class="quake-time">${timeAgo(time)}</span></td>
+            <td><span class="quake-depth">${depth} km</span></td>
+          </tr>`;
+      }).join('');
+  }
+
+  if (zona.map) {
+    zona.markers.forEach(m => zona.map.removeLayer(m));
+    zona.markers = [];
+
+    nearby.forEach(feature => {
+      const mag    = feature.properties.mag || 0;
+      const place  = feature.properties.place || 'Desconocido';
+      const time   = new Date(feature.properties.time);
+      const [lng, lat] = feature.geometry.coordinates;
+      const color  = magColor(mag);
+      const radius = Math.max(4, mag * 2.5);
+
+      const circle = L.circleMarker([lat, lng], {
+        radius, fillColor: color, color, weight: 1,
+        opacity: 0.8, fillOpacity: 0.5
+      }).bindPopup(`
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:#e2e2f0;background:#0d0d18;padding:4px;">
+          <b style="font-size:15px;color:${color}">M ${mag.toFixed(1)}</b><br>
+          ${place}<br>
+          <span style="color:#6b6b90">${timeAgo(time)}</span>
+        </div>
+      `, { className: 'terra-popup' });
+
+      circle.addTo(zona.map);
+      zona.markers.push(circle);
+    });
+  }
+}
+
+/* Recalcular todas las zonas */
+function actualizarTodasLasZonas() {
+  zonasGuardadas.forEach(zona => actualizarZonaData(zona));
+}
+
+/* showView — al entrar a Mi Zona, refrescar datos */
 const _origShowView = showView;
 showView = function(view) {
   _origShowView(view);
   if (view === 'mizona') {
-    initMzMap();
-    // Actualizar tag de usuario
     const tag = document.getElementById('mz-user-tag');
     if (tag && currentUser) tag.textContent = currentUser.email;
-    // Si ya tiene zona cargada, renderizar
-    if (mizonaLat) loadMiZonaData();
-    else document.getElementById('mz-empty').classList.remove('hidden');
+
+    if (!zonasGuardadas.length && currentUser) {
+      loadUserPreferences();
+    } else {
+      actualizarTodasLasZonas();
+    }
   }
 };

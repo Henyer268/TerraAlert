@@ -261,9 +261,9 @@
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
-            <button class="btn-save-prefs" onclick="guardarYCargarMiZona()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              GUARDAR Y APLICAR
+            <button class="btn-save-prefs" onclick="agregarZona()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              AGREGAR ZONA
             </button>
             <span class="pref-saved-msg hidden" id="pref-saved-msg">✓ Guardado</span>
           </div>
@@ -276,89 +276,16 @@
           <span class="mz-status-loc" id="mz-status-loc"></span>
         </div>
 
-        <!-- CUERPO PRINCIPAL -->
-        <div class="mz-body">
-
-          <!-- Columna izquierda: stats + tabla -->
-          <div class="mz-left">
-
-            <!-- Stats cards -->
-            <div class="mz-stats-grid" id="mz-stats-grid">
-              <div class="stat-card">
-                <div class="stat-label">Sismos en Mi Zona</div>
-                <div class="stat-value" id="mz-total">—</div>
-                <div class="stat-sub" id="mz-total-sub">últimas 24h</div>
-              </div>
-              <div class="stat-card stat-card--warn">
-                <div class="stat-label">Magnitud Máx.</div>
-                <div class="stat-value" id="mz-max">—</div>
-                <div class="stat-sub" id="mz-max-sub">—</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Magnitud Prom.</div>
-                <div class="stat-value" id="mz-avg">—</div>
-                <div class="stat-sub">en radio seleccionado</div>
-              </div>
-              <div class="stat-card stat-card--danger">
-                <div class="stat-label">Último Evento</div>
-                <div class="stat-value stat-value--sm" id="mz-last">—</div>
-                <div class="stat-sub" id="mz-last-sub">—</div>
-              </div>
-            </div>
-
-            <!-- Card último sismo destacado -->
-            <div class="mz-highlight hidden" id="mz-highlight">
-              <div class="mz-highlight-label">ÚLTIMO SISMO RELEVANTE</div>
-              <div class="mz-highlight-body">
-                <div class="mz-highlight-mag" id="mz-hl-mag">—</div>
-                <div class="mz-highlight-info">
-                  <div class="mz-hl-place" id="mz-hl-place">—</div>
-                  <div class="mz-hl-meta">
-                    <span id="mz-hl-time">—</span>
-                    <span id="mz-hl-depth">—</span>
-                    <span id="mz-hl-clas">—</span>
-                  </div>
-                  <a class="alert-card-link" id="mz-hl-link" href="#" target="_blank" rel="noopener">Ver en USGS ↗</a>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tabla sismos zona -->
-            <div class="table-panel mz-table-panel">
-              <div class="panel-header">
-                <span class="panel-title">SISMOS EN MI ZONA</span>
-                <span class="panel-count" id="mz-quake-count">—</span>
-              </div>
-              <div class="table-scroll">
-                <table class="quake-table">
-                  <thead><tr><th>Mag.</th><th>Lugar</th><th>Hora</th><th>Prof.</th></tr></thead>
-                  <tbody id="mz-tbody">
-                    <tr><td colspan="4" class="loading-row">Configura tu zona para ver sismos</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Columna derecha: mapa -->
-          <div class="mz-right">
-            <div class="map-panel">
-              <div class="panel-header">
-                <span class="panel-title">MAPA DE MI ZONA</span>
-                <span class="panel-tag">EN VIVO</span>
-              </div>
-              <div id="mz-map"></div>
-            </div>
-          </div>
-
+        <!-- ZONAS GUARDADAS -->
+        <div class="mz-zonas-container" id="mz-zonas-container">
+          <!-- Las tarjetas de zona se inyectan dinámicamente aquí -->
         </div>
 
         <!-- Estado vacío -->
         <div class="mz-empty" id="mz-empty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="48" height="48" style="color:var(--muted)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <p>Toca <strong>CONFIGURAR</strong> para escoger tu zona de interés</p>
-          <p style="font-size:10px;color:var(--muted);margin-top:4px;">Puedes poner solo el país o agregar tu ciudad para más precisión</p>
+          <p>Toca <strong>CONFIGURAR</strong> para agregar tu primera zona de interés</p>
+          <p style="font-size:10px;color:var(--muted);margin-top:4px;">Puedes poner solo el país o agregar tu ciudad para más precisión. Puedes agregar varias zonas.</p>
         </div>
 
       </section>
