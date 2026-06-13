@@ -854,7 +854,7 @@ function renderZonasContainer() {
           <div class="stat-card">
             <div class="stat-label">Sismos</div>
             <div class="stat-value" id="mz-total-${zona.id}">—</div>
-            <div class="stat-sub">radio 500 km</div>
+            <div class="stat-sub">radio 1000 km</div>
           </div>
           <div class="stat-card stat-card--warn">
             <div class="stat-label">Mag. Máx.</div>
