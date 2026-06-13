@@ -658,7 +658,7 @@ function clearMapSearch() {
 
 /* Cards de stats filtradas por zona (radio 500km) */
 function updateStatsForZone(lat, lng) {
-  const radio = 500; // km
+  const radio = 1000; // km
   const nearby = allQuakes.filter(f => {
     const [fLng, fLat] = f.geometry.coordinates;
     return haversine(lat, lng, fLat, fLng) <= radio;
@@ -929,7 +929,7 @@ function initZonaMap(zona) {
 
 /* Calcular y renderizar datos de una zona específica */
 function actualizarZonaData(zona) {
-  const radio  = 500;
+  const radio  = 1000;
   const umbral = zona.umbral_magnitud || 5.0;
 
   const nearby = allQuakes.filter(f => {
