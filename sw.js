@@ -3,7 +3,7 @@
    Cache offline + Push Notifications
    ═══════════════════════════════════════════ */
 
-const VERSION     = 'v2.7';
+const VERSION     = 'v2.8';
 const CACHE_SHELL = `terraalert-shell-${VERSION}`;
 const CACHE_DATA  = `terraalert-data-${VERSION}`;
 
