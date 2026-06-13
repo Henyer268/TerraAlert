@@ -415,7 +415,10 @@ function showView(view) {
   } else if (view === 'map') {
     statsGrid?.classList.remove('hidden');
     mapSection?.classList.remove('hidden');
-    if (map) setTimeout(() => map.invalidateSize(), 50);
+    if (map) {
+      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 350);
+    }
 
   } else if (view === 'alerts') {
     alertSection?.classList.remove('hidden');
