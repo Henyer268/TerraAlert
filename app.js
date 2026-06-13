@@ -928,6 +928,8 @@ function initZonaMap(zona) {
     </div>`, { className: 'terra-popup' });
 
   setTimeout(() => zona.map.invalidateSize(), 100);
+  setTimeout(() => zona.map.invalidateSize(), 400);
+  setTimeout(() => zona.map.invalidateSize(), 800);
 }
 
 /* Calcular y renderizar datos de una zona específica */
