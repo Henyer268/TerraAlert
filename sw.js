@@ -3,7 +3,7 @@
    Cache offline + Push Notifications
    ═══════════════════════════════════════════ */
 
-const VERSION     = 'v2.1';
+const VERSION     = 'v2.2';
 const CACHE_SHELL = `terraalert-shell-${VERSION}`;
 const CACHE_DATA  = `terraalert-data-${VERSION}`;
 
@@ -90,6 +90,11 @@ self.addEventListener('fetch', event => {
   if (url.hostname.includes('supabase.co') ||
       url.search.includes('code=') ||
       url.hash.includes('access_token')) {
+    return; /* dejar pasar sin interceptar */
+  }
+
+  /* 3.5 Nominatim: siempre red, nunca cache (búsquedas dinámicas) */
+  if (url.hostname.includes('nominatim.openstreetmap.org')) {
     return; /* dejar pasar sin interceptar */
   }
 
