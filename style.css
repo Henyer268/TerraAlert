@@ -416,6 +416,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   .map-fullview { padding: 0 14px 14px; }
   .map-panel--full #map { height: calc(100vh - 220px); }
 
+.map-search-bar {
+    flex-wrap: wrap;
+  }
+  .map-search-input {
+    flex: 1 1 100%;
+  }
+  .map-search-btn,
+  .map-search-clear {
+    flex: 1;
+  }
+
   .prefs-grid { grid-template-columns: 1fr; }
   .prefs-panel { margin: 0 14px 10px; }
 }
