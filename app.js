@@ -580,9 +580,9 @@ async function searchLocation() {
 
   try {
     const res  = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-      { headers: { 'Accept-Language': 'es' } }
-    );
+  `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&_=${Date.now()}`,
+  { headers: { 'Accept-Language': 'es' }, cache: 'no-store' }
+);
     const data = await res.json();
 
     if (!data.length) {
@@ -750,8 +750,8 @@ async function agregarZona() {
 
   try {
     const res  = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-      { headers: { 'Accept-Language': 'es' } }
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&_=${Date.now()}`,
+      { headers: { 'Accept-Language': 'es' }, cache: 'no-store' }
     );
     const data = await res.json();
     if (!data.length) throw new Error('No encontrado');
