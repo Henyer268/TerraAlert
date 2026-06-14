@@ -130,9 +130,9 @@ async function networkFirstData(request) {
   const cache = await caches.open(CACHE_DATA);
   try {
     const response = await fetch(request);
-    if (response && response.status === 200) {
-      cache.put(request, response.clone());
-    }
+    if (response && response.status === 200 && request.method === 'GET') {
+  cache.put(request, response.clone());
+}
     return response;
   } catch {
     const cached = await cache.match(request, { ignoreSearch: true });
