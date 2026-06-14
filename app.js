@@ -162,12 +162,13 @@ async function checkSevereQuakes() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `📍 ${titulo}: Sismo M ${topZ.properties.mag.toFixed(1)}`,
-          body:  topZ.properties.place || 'Ver detalles en terraALERT',
-          mag:   topZ.properties.mag,
-          id:    keyZ,
-          url:   '/?view=mizona'
-        })
+  title: `📍 ${titulo}: Sismo M ${topZ.properties.mag.toFixed(1)}`,
+  body:  topZ.properties.place || 'Ver detalles en terraALERT',
+  mag:   topZ.properties.mag,
+  id:    keyZ,
+  url:   '/?view=mizona',
+  user_id: currentUser?.id || null
+})
       });
       nuevosNotificados.push(keyZ);
     }

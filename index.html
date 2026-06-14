@@ -403,7 +403,7 @@ console.log('[PWA] Service Worker registrado:', reg.scope);
   await fetch(`${BACKEND_URL}/push/subscribe`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sub.toJSON())
+    body: JSON.stringify({ ...sub.toJSON(), user_id: window.currentUser?.id || null })
   });
 
   label.textContent = 'PUSH: ON';

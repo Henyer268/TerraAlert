@@ -76,14 +76,15 @@ def limpiar_sismo(feature: dict, clasificacion_data: dict) -> dict:
     }
 
 
-async def get_subscriptions_from_supabase() -> list:
-    """Obtiene todas las suscripciones guardadas en Supabase."""
+async def get_subscriptions_from_supabase(user_id: str = None) -> list:
+    """Obtiene suscripciones de Supabase. Si user_id se especifica, filtra por ese usuario."""
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(
-                f"{SUPABASE_URL}/rest/v1/push_subscriptions?select=subscription",
-                headers=SUPABASE_HEADERS
-            )
+            if user_id:
+                url = f"{SUPABASE_URL}/rest/v1/push_subscriptions?select=subscription&user_id=eq.{user_id}"
+            else:
+                url = f"{SUPABASE_URL}/rest/v1/push_subscriptions?select=subscription"
+            resp = await client.get(url, headers=SUPABASE_HEADERS)
             if resp.status_code == 200:
                 rows = resp.json()
                 return [row["subscription"] for row in rows]
@@ -95,6 +96,9 @@ async def get_subscriptions_from_supabase() -> list:
 async def save_subscription_to_supabase(sub: dict):
     """Guarda una suscripción en Supabase (ignora duplicados por endpoint)."""
     endpoint = sub.get("endpoint", "")
+    user_id  = sub.get("user_id")
+    # Limpiar user_id del objeto antes de guardarlo como subscription JSON
+    sub_clean = {k: v for k, v in sub.items() if k != "user_id"}
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             # Verificar si ya existe
@@ -103,13 +107,20 @@ async def save_subscription_to_supabase(sub: dict):
                 headers=SUPABASE_HEADERS
             )
             if check.status_code == 200 and check.json():
-                return  # ya existe, no duplicar
+                # Actualizar user_id si ya existe
+                existing_id = check.json()[0]["id"]
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/push_subscriptions?id=eq.{existing_id}",
+                    headers=SUPABASE_HEADERS,
+                    json={"user_id": user_id, "subscription": sub_clean}
+                )
+                return
 
             # Insertar nueva
             await client.post(
                 f"{SUPABASE_URL}/rest/v1/push_subscriptions",
                 headers=SUPABASE_HEADERS,
-                json={"endpoint": endpoint, "subscription": sub}
+                json={"endpoint": endpoint, "subscription": sub_clean, "user_id": user_id}
             )
     except Exception as e:
         print(f"[Supabase] Error guardando suscripción: {e}")
@@ -222,7 +233,15 @@ async def subscribe(sub: dict):
 
 @app.post("/push/notify")
 async def notify(payload: dict):
-    subscriptions = await get_subscriptions_from_supabase()
+    user_id = payload.get("user_id")  # None = alerta global, str = alerta personal
+
+    if user_id:
+        # Alerta de Mi Zona: solo al usuario dueño de esa zona
+        subscriptions = await get_subscriptions_from_supabase(user_id=user_id)
+    else:
+        # Alerta global (≥6.0): a todos los suscritos
+        subscriptions = await get_subscriptions_from_supabase()
+
     data   = json.dumps(payload)
     failed = []
     for sub in subscriptions:
