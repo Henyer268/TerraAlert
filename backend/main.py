@@ -19,7 +19,14 @@ VAPID_PRIVATE_KEY = "2aGVAkMy6sLh_NYV_rgCgbGKnZyJ_JefclrIGrCt_Rc"
 VAPID_PUBLIC_KEY  = "BGksutg_PEWXhXQ9abTjm8VupjYOcWbiHKge0zABrG_1hbCJJXp6Ke-A9hoo7K63Wl7T6YXHXahVx7V8RCcS2PY"
 VAPID_CLAIMS      = {"sub": "mailto:ais123k2k@gmail.com"}
 
-subscriptions = []
+SUPABASE_URL = "https://oajhwwplkmwdwljokhvk.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hamh3d3Bsa213ZHdsam9raHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDcxMjcsImV4cCI6MjA5NjQyMzEyN30.M7msv2z_hgpYfjcH0JdWkPUb3olKv66cr7YyJ_fQIqo"
+SUPABASE_HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
+
 
 def clasificar_magnitud(mag: float) -> str:
     """Fallback local si el microservicio Java no responde."""
@@ -38,7 +45,6 @@ async def clasificar_con_java(mag: float) -> dict:
                 return resp.json()
     except Exception:
         pass
-    # Fallback
     return {
         "clasificacion": clasificar_magnitud(mag),
         "color": "#60a5fa",
@@ -70,6 +76,45 @@ def limpiar_sismo(feature: dict, clasificacion_data: dict) -> dict:
     }
 
 
+async def get_subscriptions_from_supabase() -> list:
+    """Obtiene todas las suscripciones guardadas en Supabase."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{SUPABASE_URL}/rest/v1/push_subscriptions?select=subscription",
+                headers=SUPABASE_HEADERS
+            )
+            if resp.status_code == 200:
+                rows = resp.json()
+                return [row["subscription"] for row in rows]
+    except Exception as e:
+        print(f"[Supabase] Error obteniendo suscripciones: {e}")
+    return []
+
+
+async def save_subscription_to_supabase(sub: dict):
+    """Guarda una suscripción en Supabase (ignora duplicados por endpoint)."""
+    endpoint = sub.get("endpoint", "")
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            # Verificar si ya existe
+            check = await client.get(
+                f"{SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.{endpoint}&select=id",
+                headers=SUPABASE_HEADERS
+            )
+            if check.status_code == 200 and check.json():
+                return  # ya existe, no duplicar
+
+            # Insertar nueva
+            await client.post(
+                f"{SUPABASE_URL}/rest/v1/push_subscriptions",
+                headers=SUPABASE_HEADERS,
+                json={"endpoint": endpoint, "subscription": sub}
+            )
+    except Exception as e:
+        print(f"[Supabase] Error guardando suscripción: {e}")
+
+
 @app.get("/")
 def root():
     return {"status": "ok", "app": "terraALERT API"}
@@ -95,7 +140,6 @@ async def get_sismos(
         resp.raise_for_status()
         data = resp.json()
 
-    # Clasificar cada sismo con el microservicio Java
     sismos = []
     for f in data["features"]:
         mag  = (f["properties"].get("mag") or 0.0)
@@ -107,6 +151,7 @@ async def get_sismos(
         "sismos":   sismos,
         "generado": datetime.utcnow().isoformat(),
     }
+
 
 @app.get("/sismos/resumen")
 async def get_resumen():
@@ -157,7 +202,8 @@ async def get_resumen():
         "por_clasificacion": conteo,
         "generado":          datetime.utcnow().isoformat(),
     }
-    
+
+
 from pywebpush import webpush, WebPushException
 import json
 
@@ -169,13 +215,14 @@ def get_vapid_key():
 
 @app.post("/push/subscribe")
 async def subscribe(sub: dict):
-    if sub not in subscriptions:
-        subscriptions.append(sub)
+    await save_subscription_to_supabase(sub)
+    subscriptions = await get_subscriptions_from_supabase()
     return {"ok": True, "total": len(subscriptions)}
 
 
 @app.post("/push/notify")
 async def notify(payload: dict):
+    subscriptions = await get_subscriptions_from_supabase()
     data   = json.dumps(payload)
     failed = []
     for sub in subscriptions:
