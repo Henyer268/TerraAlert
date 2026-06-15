@@ -400,10 +400,13 @@ console.log('[PWA] Service Worker registrado:', reg.scope);
   });
 
   // 3. Enviar suscripción al backend
+  const userId = currentUser?.id || null;
+  console.log('[PUSH] Suscribiendo con user_id:', userId);
+
   await fetch(`${BACKEND_URL}/push/subscribe`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...sub.toJSON(), user_id: currentUser?.id || null })
+    body: JSON.stringify({ ...sub.toJSON(), user_id: userId })
   });
 
   label.textContent = 'PUSH: ON';
