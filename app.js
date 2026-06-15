@@ -213,8 +213,10 @@ function renderStats() {
 
   const severe = q.filter(f => f.properties.mag >= 6).length;
   const badge  = document.getElementById('alert-count');
-  badge.textContent = severe;
-  badge.classList.toggle('show', severe > 0);
+  if (!alertasVistas) {
+    badge.textContent = severe;
+    badge.classList.toggle('show', severe > 0);
+  }
 }
 
 /* ─── MAPA ───────────────────────────────── */
@@ -328,6 +330,7 @@ function updateLastUpdate() {
 let soundEnabled = true;
 let audioCtx = null;
 let alertSoundPlayed = false;
+let alertasVistas = false;
 
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -468,6 +471,7 @@ function showView(view) {
     // ── Resetear badge al entrar a la vista ──
     const badge = document.getElementById('alert-count');
     if (badge) { badge.textContent = '0'; badge.classList.remove('show'); }
+    alertasVistas = true;
   }
 }
 
