@@ -463,8 +463,11 @@ function showView(view) {
 
   } else if (view === 'alerts') {
     alertSection?.classList.remove('hidden');
-    alertSoundPlayed = false; // permitir sonido al entrar a la vista
+    alertSoundPlayed = false;
     renderAlerts();
+    // ── Resetear badge al entrar a la vista ──
+    const badge = document.getElementById('alert-count');
+    if (badge) { badge.textContent = '0'; badge.classList.remove('show'); }
   }
 }
 
