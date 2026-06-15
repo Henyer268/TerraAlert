@@ -174,8 +174,8 @@ self.addEventListener('push', event => {
   try { data = { ...data, ...event.data.json() }; } catch {}
 
   const mag   = data.mag || 0;
-  const icon  = mag >= 7 ? '/public/icon-512.png' : '/public/icon-192.png';
-const badge = '/public/icon-96.png';
+  const icon  = '/public/icon-notification.png';
+const badge = '/public/icon-notification.png';
 
   const title   = data.title || `🌍 Sismo M ${mag.toFixed(1)}`;
   const options = {
