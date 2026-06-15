@@ -255,3 +255,93 @@ async def notify(payload: dict):
         except WebPushException as e:
             failed.append(str(e))
     return {"enviados": len(subscriptions) - len(failed), "errores": failed}
+
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+scheduler = AsyncIOScheduler()
+
+async def job_verificar_sismos():
+    """Corre cada 5 min: busca sismos nuevos y notifica a usuarios con zonas cercanas."""
+    try:
+        # 1. Obtener sismos recientes de USGS
+        params = {
+            "format": "geojson",
+            "starttime": (datetime.utcnow() - timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S"),
+            "minmagnitude": 2.5,
+            "orderby": "time",
+            "limit": 50,
+        }
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(USGS_URL, params=params)
+            features = resp.json().get("features", [])
+
+        if not features:
+            return
+
+        # 2. Obtener todas las suscripciones con user_id
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{SUPABASE_URL}/rest/v1/push_subscriptions?select=user_id,subscription&user_id=not.is.null",
+                headers=SUPABASE_HEADERS
+            )
+            suscripciones = resp.json()
+
+        # 3. Obtener todas las zonas de usuarios
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{SUPABASE_URL}/rest/v1/user_preferences?select=user_id,pais,ciudad,umbral_magnitud,lat,lng",
+                headers=SUPABASE_HEADERS
+            )
+            zonas = resp.json()
+
+        # 4. Para cada zona, verificar si hay sismo cercano
+        import math
+        def haversine(lat1, lng1, lat2, lng2):
+            R = 6371
+            dL = (lat2 - lat1) * math.pi / 180
+            dG = (lng2 - lng1) * math.pi / 180
+            a = math.sin(dL/2)**2 + math.cos(lat1*math.pi/180) * math.cos(lat2*math.pi/180) * math.sin(dG/2)**2
+            return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+        for zona in zonas:
+            umbral = zona.get("umbral_magnitud") or 5.0
+            for f in features:
+                mag = f["properties"].get("mag") or 0
+                if mag < umbral:
+                    continue
+                coords = f["geometry"]["coordinates"]
+                dist = haversine(zona["lat"], zona["lng"], coords[1], coords[0])
+                if dist > 1000:
+                    continue
+
+                # Hay sismo cerca → notificar solo a ese usuario
+                user_subs = [s["subscription"] for s in suscripciones if s["user_id"] == zona["user_id"]]
+                lugar = f["properties"].get("place", "Desconocido")
+                titulo = zona.get("ciudad") or zona.get("pais") or "Tu zona"
+
+                for sub in user_subs:
+                    try:
+                        webpush(
+                            subscription_info=sub,
+                            data=json.dumps({
+                                "title": f"📍 {titulo}: Sismo M {mag:.1f}",
+                                "body": lugar,
+                                "mag": mag,
+                                "id": f["id"],
+                                "url": "/?view=mizona"
+                            }),
+                            vapid_private_key=VAPID_PRIVATE_KEY,
+                            vapid_claims=VAPID_CLAIMS
+                        )
+                    except Exception:
+                        pass
+
+    except Exception as e:
+        print(f"[CRON] Error: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    scheduler.add_job(job_verificar_sismos, 'interval', minutes=5)
+    scheduler.start()
+    print("[CRON] Scheduler iniciado — verificando sismos cada 5 min")
