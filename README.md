@@ -387,13 +387,19 @@ O usar [web-push-codelab.glitch.me](https://web-push-codelab.glitch.me/) para ge
 | [Vercel](https://vercel.com/) | Hosting del frontend con CDN global | [Docs](https://vercel.com/docs) |
 | [Render](https://render.com/) | Hosting del backend FastAPI y microservicio Java | [Docs](https://render.com/docs) |
 | [CartoDB Basemaps](https://carto.com/basemaps/) | Tiles del mapa oscuro para Leaflet | — |
-
+| [CartoDB Basemaps](https://carto.com/basemaps/) | Tiles del mapa oscuro para Leaflet | — |
 ---
+
+## Uso de IA
+
+Este proyecto fue desarrollado con asistencia de herramientas de inteligencia artificial:
+
+**Claude (Anthropic)** — usado a lo largo de todo el desarrollo para: depuración de código, diseño de la arquitectura de notificaciones push, resolución de bugs en la integración Supabase + OAuth, implementación del cron job con APScheduler, y optimización del flujo de vincularSuscripcionAlUsuario.
 
 ## Autores
 
 **Henyer Melendez** **Darilith Ferrer** **Estiven Leon** **Jeison Garcia** — Proyecto académico / personal  
-Universidad · Ingeniería de Sistemas
+Universidad de la Guajira · Ingeniería de Sistemas
 
 ---
 
