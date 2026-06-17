@@ -564,6 +564,7 @@ sb.auth.getSession().then(({ data: { session } }) => {
   sessionReady = true;
   if (session?.user) {
     currentUser = session.user;
+    vincularSuscripcionAlUsuario();
     loadUserPreferences();
     showUserMenu();
     updateMiZonaBtn(true);
@@ -719,6 +720,20 @@ function haversine(lat1, lng1, lat2, lng2) {
   const a  = Math.sin(dL/2)**2 +
              Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dG/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function vincularSuscripcionAlUsuario() {
+  if (!currentUser) return;
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (!sub) return;
+
+  await fetch(`${BACKEND_URL}/push/subscribe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...sub.toJSON(), user_id: currentUser.id })
+  });
+  console.log('[PUSH] Suscripción vinculada al usuario:', currentUser.id);
 }
 
 /* ─── MI ZONA — multi-zonas ──────────────── */
