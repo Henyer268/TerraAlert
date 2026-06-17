@@ -3,3 +3,6 @@ backend/venv/
 java-service/target/
 *.pyc
 .env
+.env
+backend/.env
+backend/venv/

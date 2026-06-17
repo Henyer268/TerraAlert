@@ -19,9 +19,15 @@ const BACKEND_URL = window.location.hostname === 'localhost' || window.location.
   : 'https://terraalert-t7t5.onrender.com';
 
 /* ─── SUPABASE ───────────────────────────────── */
-const SUPABASE_URL = 'https://oajhwwplkmwdwljokhvk.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hamh3d3Bsa213ZHdsam9raHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDcxMjcsImV4cCI6MjA5NjQyMzEyN30.M7msv2z_hgpYfjcH0JdWkPUb3olKv66cr7YyJ_fQIqo';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let SUPABASE_URL, SUPABASE_KEY, sb;
+
+async function initConfig() {
+  const res    = await fetch(`${BACKEND_URL}/config`);
+  const config = await res.json();
+  SUPABASE_URL = config.supabase_url;
+  SUPABASE_KEY = config.supabase_key;
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
 
 let currentUser = null;
 let sessionReady = false;
@@ -553,6 +559,7 @@ async function logout() {
 }
 
 /* ─── INIT AUTH ──────────────────────────── */
+initConfig().then(() => {
 sb.auth.getSession().then(({ data: { session } }) => {
   sessionReady = true;
   if (session?.user) {
@@ -573,6 +580,7 @@ sb.auth.getSession().then(({ data: { session } }) => {
   if (!appEl.classList.contains('hidden')) {
     initDashboard();
   }
+});
 });
 
 /* ─── BUSCADOR DEL MAPA (Nominatim) ────────── */

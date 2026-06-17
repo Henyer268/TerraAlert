@@ -12,15 +12,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-USGS_URL     = "https://earthquake.usgs.gov/fdsnws/event/1/query"
-JAVA_SERVICE = "https://terraalert-java.onrender.com"
+from dotenv import load_dotenv
+import os
 
-VAPID_PRIVATE_KEY = "2aGVAkMy6sLh_NYV_rgCgbGKnZyJ_JefclrIGrCt_Rc"
-VAPID_PUBLIC_KEY  = "BGksutg_PEWXhXQ9abTjm8VupjYOcWbiHKge0zABrG_1hbCJJXp6Ke-A9hoo7K63Wl7T6YXHXahVx7V8RCcS2PY"
-VAPID_CLAIMS      = {"sub": "mailto:ais123k2k@gmail.com"}
+load_dotenv()
 
-SUPABASE_URL = "https://oajhwwplkmwdwljokhvk.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hamh3d3Bsa213ZHdsam9raHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDcxMjcsImV4cCI6MjA5NjQyMzEyN30.M7msv2z_hgpYfjcH0JdWkPUb3olKv66cr7YyJ_fQIqo"
+USGS_URL          = "https://earthquake.usgs.gov/fdsnws/event/1/query"
+SUPABASE_URL      = os.getenv("SUPABASE_URL")
+SUPABASE_KEY      = os.getenv("SUPABASE_KEY")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
+VAPID_PUBLIC_KEY  = os.getenv("VAPID_PUBLIC_KEY")
+VAPID_CLAIMS      = {"sub": os.getenv("VAPID_EMAIL")}
+JAVA_SERVICE      = os.getenv("JAVA_SERVICE")
+
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -345,3 +349,11 @@ async def startup_event():
     scheduler.add_job(job_verificar_sismos, 'interval', minutes=5)
     scheduler.start()
     print("[CRON] Scheduler iniciado — verificando sismos cada 5 min")
+    
+@app.get("/config")
+def get_config():
+    return {
+        "supabase_url": SUPABASE_URL,
+        "supabase_key": SUPABASE_KEY,
+        "vapid_public_key": VAPID_PUBLIC_KEY,
+    }
