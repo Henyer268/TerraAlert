@@ -54,7 +54,7 @@ function enterApp() {
     video.pause(); video.src = '';
   }, { once: true });
   initDashboard();
-  setInterval(() => fetch(`${BACKEND_URL}/`).catch(() => {}), 10 * 60 * 1000); // ← keep-alive
+  setInterval(() => fetch(`${BACKEND_URL}/`).catch(() => {}), 5 * 60 * 1000); // ← keep-alive
 
   // Solo actualizar UI si ya hay sesión (sin bloquear entrada)
   if (sessionReady && currentUser) {
