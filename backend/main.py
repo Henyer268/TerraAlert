@@ -130,9 +130,12 @@ async def save_subscription_to_supabase(sub: dict):
         print(f"[Supabase] Error guardando suscripción: {e}")
 
 
-@app.get("/")
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
-    return {"status": "ok", "app": "terraALERT API"}
+    return JSONResponse({"status": "ok", "app": "terraALERT API"})
 
 
 @app.get("/sismos")
