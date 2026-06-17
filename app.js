@@ -68,9 +68,13 @@ function enterApp() {
 let allQuakes = [];
 let map = null;
 let markers = [];
+let dashboardInitialized = false;
 
 /* ─── INIT DASHBOARD ──────────────────────── */
 function initDashboard() {
+  if (dashboardInitialized) return;
+  dashboardInitialized = true;
+
   initMap();
   loadData();
   setInterval(loadData, 5 * 60 * 1000);
@@ -79,6 +83,10 @@ function initDashboard() {
 
 /* ─── MAPA LEAFLET ───────────────────────── */
 function initMap() {
+  if (map) {
+    map.remove();
+    map = null;
+  }
   map = L.map('map', { center: [20, 0], zoom: 2, zoomControl: true, attributionControl: false });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
 }
